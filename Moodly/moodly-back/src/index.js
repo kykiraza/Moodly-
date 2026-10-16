@@ -1,20 +1,26 @@
 'use strict';
 
+const setupPermissions = require('./bootstrap/permissions');
+const setupDatabase = require('./bootstrap/database');
+
 module.exports = {
   /**
-   * An asynchronous register function that runs before
-   * your application is initialized.
-   *
-   * This gives you an opportunity to extend code.
+   * Avant le démarrage : on vérifie que la configuration Moodly est présente.
    */
-  register(/*{ strapi }*/) {},
+  register() {
+    const salt = process.env.MOOD_SALT;
+    if (!salt || /^tobemodified$/i.test(salt)) {
+      throw new Error(
+        'MOOD_SALT manquant ou non modifié dans .env. Lance `npm run setup` puis redémarre.'
+      );
+    }
+  },
 
   /**
-   * An asynchronous bootstrap function that runs before
-   * your application gets started.
-   *
-   * This gives you an opportunity to set up your data model,
-   * run jobs, or perform some special logic.
+   * Au démarrage (la base est prête) : rôles, permissions et index unique.
    */
-  bootstrap(/*{ strapi }*/) {},
+  async bootstrap({ strapi }) {
+    await setupPermissions({ strapi });
+    await setupDatabase({ strapi });
+  },
 };
