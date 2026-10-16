@@ -1,0 +1,130 @@
+### Tests de l'API Moodly
+### Avec l'extension VS Code « REST Client » (humao.rest-client) :
+### clique sur « Send Request » au-dessus de chaque requête.
+### Prérequis : npm run seed, puis npm run develop.
+### Ordre conseillé : d'abord les 2 logins (ils remplissent les tokens), puis le reste.
+
+@api = http://localhost:1337/api
+@password = Moodly2026!
+
+@employeeToken = {{loginEmployee.response.body.token}}
+@managerToken = {{loginManager.response.body.token}}
+@teamId = {{profileManager.response.body.managedTeams[0].documentId}}
+
+
+############################################################
+# 1. CONNEXION
+############################################################
+
+### Login employé → { token, role: "employee", name }
+# @name loginEmployee
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "email": "lea@moodly.test", "password": "{{password}}" }
+
+### Login manager → { token, role: "manager", name }
+# @name loginManager
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "email": "sarah@moodly.test", "password": "{{password}}" }
+
+### ❌ Mauvais mot de passe → 401
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "email": "lea@moodly.test", "password": "faux" }
+
+### ❌ Inscription libre désactivée → 400
+POST {{api}}/auth/local/register
+Content-Type: application/json
+
+{ "username": "pirate", "email": "pirate@test.fr", "password": "{{password}}" }
+
+
+############################################################
+# 2. PROFIL ET TAGS
+############################################################
+
+### Profil employé → { name, role, team, managedTeams: [] }
+GET {{api}}/profile
+Authorization: Bearer {{employeeToken}}
+
+### Profil manager (sert aussi à récupérer @teamId)
+# @name profileManager
+GET {{api}}/profile
+Authorization: Bearer {{managerToken}}
+
+### Liste des tags (pour l'écran de saisie)
+GET {{api}}/tags?fields[0]=label&fields[1]=slug&fields[2]=emoji
+Authorization: Bearer {{employeeToken}}
+
+
+############################################################
+# 3. SAISIE DU MORAL (employé)
+############################################################
+
+### A-t-il déjà répondu aujourd'hui ? → { hasAnswered, day }
+GET {{api}}/moods/today
+Authorization: Bearer {{employeeToken}}
+
+### ✅ Saisie : note 1 à 5 + 0 à 3 tags (slugs) → 201
+POST {{api}}/moods
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{ "score": 4, "tags": ["projet-motivant", "fatigue"] }
+
+### ❌ 2e saisie le même jour → 409
+POST {{api}}/moods
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{ "score": 2 }
+
+### ❌ Note hors limites → 400
+POST {{api}}/moods
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{ "score": 9 }
+
+### ❌ Trop de tags → 400
+POST {{api}}/moods
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{ "score": 3, "tags": ["fatigue", "management", "communication", "reconnaissance"] }
+
+### ❌ Personne ne peut relire les saisies → 404 (la route n'existe pas)
+GET {{api}}/moods
+Authorization: Bearer {{employeeToken}}
+
+
+############################################################
+# 4. STATISTIQUES (manager)
+############################################################
+
+### Stats de mon équipe, format du front → { team, daily, summary, tags }
+GET {{api}}/team/stats?days=30
+Authorization: Bearer {{managerToken}}
+
+### Stats d'une équipe précise → { data: { series, summary, tags, ... } }
+GET {{api}}/teams/{{teamId}}/stats?days=30
+Authorization: Bearer {{managerToken}}
+
+### ❌ Un employé ne voit pas les stats → 403
+GET {{api}}/team/stats
+Authorization: Bearer {{employeeToken}}
+
+### ❌ days invalide → 400
+GET {{api}}/team/stats?days=500
+Authorization: Bearer {{managerToken}}
+
+### ❌ Un manager ne peut pas saisir de moral → 403
+POST {{api}}/moods
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{ "score": 4 }
