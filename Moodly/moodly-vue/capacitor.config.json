@@ -1,0 +1,14 @@
+{
+  "appId": "fr.moodly.app",
+  "appName": "Moodly",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#3B82F6"
+    }
+  }
+}

@@ -1,0 +1,204 @@
+/* Design copié du prototype (source/src/styles.css) */
+@import "tailwindcss" source(none);
+@source "./";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ink: var(--ink);
+  --color-mood-1: var(--mood-1);
+  --color-mood-2: var(--mood-2);
+  --color-mood-3: var(--mood-3);
+  --color-mood-4: var(--mood-4);
+  --color-mood-5: var(--mood-5);
+  --color-mood-1-soft: var(--mood-1-soft);
+  --color-mood-2-soft: var(--mood-2-soft);
+  --color-mood-3-soft: var(--mood-3-soft);
+  --color-mood-4-soft: var(--mood-4-soft);
+  --color-mood-5-soft: var(--mood-5-soft);
+  --color-blush: var(--blush);
+}
+
+:root {
+  --radius: 1.25rem;
+  --background: oklch(0.975 0.015 85);
+  --foreground: oklch(0.22 0.02 60);
+  --ink: oklch(0.2 0.02 60);
+  --card: oklch(0.995 0.006 85);
+  --card-foreground: oklch(0.22 0.02 60);
+  --popover: oklch(0.995 0.006 85);
+  --popover-foreground: oklch(0.22 0.02 60);
+  --primary: oklch(0.64 0.18 252);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0.02 85);
+  --secondary-foreground: oklch(0.22 0.02 60);
+  --muted: oklch(0.94 0.018 85);
+  --muted-foreground: oklch(0.52 0.02 60);
+  --accent: oklch(0.92 0.06 252);
+  --accent-foreground: oklch(0.35 0.14 252);
+  --destructive: oklch(0.6 0.22 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.9 0.02 85);
+  --input: oklch(0.9 0.02 85);
+  --ring: oklch(0.64 0.18 252);
+  --blush: oklch(0.75 0.13 20);
+
+  --mood-1: oklch(0.65 0.2 30);
+  --mood-2: oklch(0.74 0.16 55);
+  --mood-3: oklch(0.84 0.15 88);
+  --mood-4: oklch(0.82 0.18 128);
+  --mood-5: oklch(0.66 0.17 145);
+  --mood-1-soft: oklch(0.93 0.05 30);
+  --mood-2-soft: oklch(0.94 0.05 60);
+  --mood-3-soft: oklch(0.95 0.06 90);
+  --mood-4-soft: oklch(0.95 0.07 128);
+  --mood-5-soft: oklch(0.94 0.06 145);
+
+  --gradient-splash: linear-gradient(
+    170deg,
+    var(--mood-1) 0%,
+    var(--mood-3) 35%,
+    var(--mood-4) 55%,
+    var(--primary) 100%
+  );
+}
+
+.dark {
+  --background: oklch(0.17 0.012 60);
+  --foreground: oklch(0.96 0.01 85);
+  --card: oklch(0.23 0.014 60);
+  --card-foreground: oklch(0.96 0.01 85);
+  --popover: oklch(0.23 0.014 60);
+  --popover-foreground: oklch(0.96 0.01 85);
+  --secondary: oklch(0.27 0.014 60);
+  --secondary-foreground: oklch(0.96 0.01 85);
+  --muted: oklch(0.27 0.014 60);
+  --muted-foreground: oklch(0.72 0.02 70);
+  --accent: oklch(0.32 0.08 252);
+  --accent-foreground: oklch(0.88 0.08 252);
+  --border: oklch(0.32 0.015 60);
+  --input: oklch(0.32 0.015 60);
+  --mood-1-soft: oklch(0.32 0.07 30);
+  --mood-2-soft: oklch(0.34 0.07 60);
+  --mood-3-soft: oklch(0.36 0.07 90);
+  --mood-4-soft: oklch(0.35 0.08 128);
+  --mood-5-soft: oklch(0.33 0.07 145);
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility bg-splash {
+  background-image: var(--gradient-splash);
+}
+
+@utility shadow-pop {
+  box-shadow: 0 4px 0 0 oklch(0.2 0.02 60 / 0.9);
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-8px) rotate(2deg); }
+}
+@utility animate-bob {
+  animation: bob 3.2s ease-in-out infinite;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0); opacity: 1; }
+  100% { transform: translateY(520px) rotate(540deg); opacity: 0; }
+}
+@utility animate-confetti {
+  animation: confetti-fall 2.6s ease-in forwards;
+}
+
+/* --- Splash --- */
+@keyframes splash-pop {
+  0% { transform: scale(0.25) translateY(40px); opacity: 0; }
+  60% { transform: scale(1.14) translateY(-8px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@utility animate-splash-pop {
+  animation: splash-pop 780ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes splash-ring {
+  0% { transform: scale(0.65); opacity: 0.5; }
+  100% { transform: scale(1.85); opacity: 0; }
+}
+@utility animate-splash-ring {
+  animation: splash-ring 1.8s ease-out infinite;
+}
+
+@keyframes splash-letter {
+  0% { transform: translateY(30px) rotate(10deg) scale(0.6); opacity: 0; }
+  100% { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+}
+@utility animate-splash-letter {
+  animation: splash-letter 540ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes splash-rise {
+  0% { transform: translateY(16px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@utility animate-splash-rise {
+  animation: splash-rise 620ms ease-out both;
+}
+
+@keyframes splash-dot {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50% { transform: translateY(-9px); opacity: 1; }
+}
+@utility animate-splash-dot {
+  animation: splash-dot 950ms ease-in-out infinite;
+}
+
+@keyframes splash-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+  50% { transform: translate3d(6px, -22px, 0) rotate(14deg); }
+}
+@utility animate-splash-float {
+  animation: splash-float 5.4s ease-in-out infinite;
+}
