@@ -17,23 +17,24 @@ module.exports = createCoreController('api::mood.mood', ({ strapi }) => ({
   /**
    * POST /api/moods
    * Body accepté : { score: 1..5, tags?: [...] }  ou le format Strapi { data: { score, tags } }.
-   * - « mood » est accepté comme synonyme de « score » (c'est le nom utilisé par le front).
-   * - tags : 0 à 3 slugs (ex. "fatigue") ou documentId de tags existants.
+   * - « level » ou « mood » sont acceptés à la place de « score » (noms utilisés par les fronts).
+   * - « factors » est accepté à la place de « tags ».
+   * - tags : 0 à 3 slugs (ex. "charge") ou documentId de tags existants.
    * - Tout le reste du body est IGNORÉ : le jour et l'équipe sont décidés par le serveur.
    */
   async create(ctx) {
     const body = ctx.request.body?.data ?? ctx.request.body ?? {};
 
     // 1) Valider la note
-    const score = body.score ?? body.mood;
+    const score = body.score ?? body.level ?? body.mood;
     if (!Number.isInteger(score) || score < 1 || score > 5) {
       return ctx.badRequest('score doit être un nombre entier entre 1 et 5');
     }
 
     // 2) Valider les tags
-    const wanted = body.tags ?? [];
+    const wanted = body.tags ?? body.factors ?? [];
     if (!Array.isArray(wanted) || wanted.some((tag) => typeof tag !== 'string' || !tag)) {
-      return ctx.badRequest('tags doit être une liste de slugs (ex. ["fatigue"])');
+      return ctx.badRequest('tags doit être une liste de slugs (ex. ["charge"])');
     }
     if (wanted.length > MAX_TAGS) {
       return ctx.badRequest(`${MAX_TAGS} tags maximum`);

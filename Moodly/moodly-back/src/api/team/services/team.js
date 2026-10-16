@@ -26,13 +26,15 @@ const average = (scores) =>
 module.exports = createCoreService('api::team.team', ({ strapi }) => ({
   /**
    * @param {string} teamDocumentId
-   * @param {number} days  nombre de jours (aujourd'hui inclus)
+   * @param {number} days  nombre de jours (aujourd'hui inclus), entre 7 et MOOD_RETENTION_DAYS
    * @returns {Promise<null | object>}  null si l'équipe n'existe pas
    */
   async stats(teamDocumentId, days) {
     const minResponses = envInt('MOOD_MIN_RESPONSES', 3);
     const to = today();
     const from = addDays(to, -(days - 1));
+    // Période précédente de même longueur, pour la tendance (« +6 % vs période précédente »)
+    const previousFrom = addDays(from, -days);
 
     const team = await strapi.documents('api::team.team').findOne({
       documentId: teamDocumentId,
@@ -43,7 +45,7 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
 
     // Uniquement les colonnes utiles : jour, note, tags (jamais dailyKey)
     const moods = await strapi.documents('api::mood.mood').findMany({
-      filters: { team: { documentId: teamDocumentId }, day: { $gte: from, $lte: to } },
+      filters: { team: { documentId: teamDocumentId }, day: { $gte: previousFrom, $lte: to } },
       fields: ['day', 'score'],
       populate: { tags: { fields: ['slug', 'label', 'emoji'] } },
     });
@@ -56,8 +58,9 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
     }
 
     const series = [];
-    const visibleScores = []; // notes des jours NON masqués
-    const tagCounts = new Map(); // tags des jours NON masqués
+    const visibleScores = []; // notes des jours publiés (terminés et >= minResponses)
+    const tagCounts = new Map(); // tags des jours publiés
+    let responsesInPeriod = 0;
     let weekdayResponses = 0;
     let weekdays = 0;
     let maskedDays = 0;
@@ -71,6 +74,7 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
       const masked = !open && responses > 0 && responses < minResponses;
       const published = !open && responses >= minResponses; // moyenne visible ?
 
+      responsesInPeriod += responses;
       // La participation est calculée sur les jours ouvrés TERMINÉS
       if (!weekend && !open) {
         weekdays += 1;
@@ -99,8 +103,21 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
       });
     }
 
+    // Période précédente : mêmes règles (seuls les jours avec assez de réponses comptent)
+    const previousScores = [];
+    for (let i = 0; i < days; i++) {
+      const dayMoods = byDay.get(addDays(previousFrom, i)) || [];
+      if (dayMoods.length >= minResponses) previousScores.push(...dayMoods.map((mood) => mood.score));
+    }
+
     const members = team.members.length;
     const expected = members * weekdays; // réponses attendues les jours ouvrés
+    const currentAverage = average(visibleScores);
+    const previousAverage = average(previousScores);
+
+    // Répartition des notes 1 à 5 (jours publiés seulement)
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const score of visibleScores) distribution[score] += 1;
 
     return {
       team: { documentId: team.documentId, name: team.name },
@@ -109,13 +126,25 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
       members,
       series,
       summary: {
-        responses: moods.length,
-        average: average(visibleScores),
+        responses: responsesInPeriod,
+        // Réponses réellement prises en compte dans la moyenne, la répartition et les tags
+        countedResponses: visibleScores.length,
+        average: currentAverage,
+        previousAverage,
+        // Évolution de la moyenne en % par rapport à la période précédente (null si pas comparable)
+        trend:
+          currentAverage !== null && previousAverage
+            ? Math.round(((currentAverage - previousAverage) / previousAverage) * 100)
+            : null,
         // Taux de participation sur les jours ouvrés terminés, en % (0 à 100)
         participationRate: expected > 0 ? Math.min(100, Math.round((weekdayResponses / expected) * 100)) : null,
         maskedDays,
       },
-      tags: [...tagCounts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+      distribution,
+      // pct = part des réponses (comptées) qui citent cette raison
+      tags: [...tagCounts.values()]
+        .map((tag) => ({ ...tag, pct: Math.round((tag.count / visibleScores.length) * 100) }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
     };
   },
 }));
