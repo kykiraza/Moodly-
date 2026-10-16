@@ -32,5 +32,16 @@ module.exports = {
       handler: 'session.social',
       config: { middlewares },
     },
+    {
+      // Nom de l'entreprise pour un code (affiché à l'inscription). Le code est passé en
+      // « ?code= » et pas dans le chemin : le limiteur compte ainsi les essais par IP sur
+      // toute la route → impossible d'essayer des milliers de codes pour lister les clients.
+      method: 'GET',
+      path: '/auth/agency',
+      handler: 'session.agency',
+      config: {
+        middlewares: [{ name: 'plugin::users-permissions.rateLimit', config: { interval: { min: 1 }, max: 20 } }],
+      },
+    },
   ],
 };

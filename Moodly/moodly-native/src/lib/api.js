@@ -66,6 +66,8 @@ export const api = {
   /** provider = 'google' | 'apple' | 'microsoft', idToken = jeton signé par le fournisseur */
   social: ({ agencyId, provider, idToken, name }) =>
     request('/auth/social', { method: 'POST', body: { agencyId, provider, idToken, name }, auth: false }),
+  /** Nom de l'entreprise pour un code : { code, name }, ou ApiError 404 si le code est inconnu. */
+  agency: (code) => request(`/auth/agency?code=${encodeURIComponent(code)}`, { auth: false }),
   profile: () => request('/profile'),
   /** Note 1..5 + 0 à 3 raisons. Le message libre n'est JAMAIS envoyé. */
   sendMood: ({ level, factors }) => request('/moods', { method: 'POST', body: { level, factors } }),

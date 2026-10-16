@@ -54,7 +54,8 @@ X-Agency-Id: AG-0001
 | Méthode | Route                      | Qui ?          | Rôle                                                              |
 | ------- | -------------------------- | -------------- | ----------------------------------------------------------------- |
 | POST    | `/auth/login`              | tout le monde  | `{ agencyId, email, password }` → session                         |
-| POST    | `/auth/register`           | tout le monde  | `{ agencyId, name, email, password }` → session (compte salarié)  |
+| POST    | `/auth/register`           | tout le monde  | `{ agencyId, name, email, password }` → session (compte salarié). Mot de passe : 8 caractères min., 1 majuscule, 1 chiffre, 1 caractère spécial |
+| GET     | `/auth/agency?code=AG-0001` | tout le monde  | `{ code, name }` : nom de l'entreprise (404 si inconnu, 20 essais/min par IP) |
 | POST    | `/auth/social`             | tout le monde  | `{ agencyId, provider, idToken, name? }` → session (Google / Apple / Microsoft) |
 | GET     | `/profile`                 | connecté       | `{ name, email, role, agency, team, managedTeams }`               |
 | GET     | `/tags`                    | connecté       | les 8 raisons proposées                                           |
@@ -184,7 +185,7 @@ moodly-back/
 │   │   ├── team/              stats manager (+ policy is-team-manager)
 │   │   ├── tag/               GET /tags (les 8 raisons)
 │   │   ├── profile/           GET /profile (+ service réutilisé partout)
-│   │   └── session/           POST /auth/login, /auth/register et /auth/social
+│   │   └── session/           POST /auth/login, /auth/register, /auth/social, GET /auth/agency
 │   │                          (services/social.js : vérification des jetons Google/Apple/Microsoft)
 │   └── extensions/users-permissions/content-types/user/schema.json
 │                              ajoute agency, team et managedTeams au User

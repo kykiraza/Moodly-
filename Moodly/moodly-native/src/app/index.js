@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { homeFor } from '@/components/RoleGate';
-import { ArrowLeft, Building2, Eye, EyeOff, Lock } from 'lucide-react-native';
+import { ArrowLeft, Building2, Check, Circle, Eye, EyeOff, Lock } from 'lucide-react-native';
+import { api } from '@/lib/api';
+import { PASSWORD_RULES, passwordIsStrong } from '@/lib/password';
 import { useAuth } from '@/lib/session';
 import { alpha, FONTS, useTheme } from '@/lib/theme';
 import { Screen } from '@/components/Screen';
@@ -124,6 +126,30 @@ function AuthForm({ mode, onBack, onSwitch }) {
   const [busy, setBusy] = useState(null); // 'form' | 'google' | 'apple' | 'microsoft' | null
   const [error, setError] = useState('');
 
+  // Inscription : nom de l'entreprise retrouvé à partir du code, pour vérifier qu'on rejoint la bonne.
+  // lookup = { code, name } (trouvée) ou { code, error } ; ne s'affiche que s'il correspond au code tapé.
+  const [lookup, setLookup] = useState(null);
+  const codeComplete = /^AG-\d{4}$/.test(agency.trim());
+  useEffect(() => {
+    if (isLogin || !codeComplete) return;
+    const code = agency.trim();
+    let cancelled = false;
+    const t = setTimeout(() => {
+      api
+        .agency(code)
+        .then((a) => !cancelled && setLookup({ code, name: a.name }))
+        .catch((e) =>
+          !cancelled &&
+          setLookup({ code, error: e.status === 404 ? 'Code entreprise inconnu' : e.status === 429 ? 'Trop d\'essais, réessaie dans une minute' : e.message }),
+        );
+    }, 300); // on attend que la personne ait fini de taper
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [isLogin, codeComplete, agency]);
+  const company = !isLogin && codeComplete && lookup?.code === agency.trim() ? lookup : null;
+
   // Changer de rôle de démo remplit l'email du compte correspondant
   const pickRole = (r) => {
     setRole(r);
@@ -144,8 +170,13 @@ function AuthForm({ mode, onBack, onSwitch }) {
     }
   }
 
-  const submit = () =>
-    run('form', () => (isLogin ? signIn(email.trim(), password, agency) : signUp(name, email.trim(), password, agency)));
+  const submit = () => {
+    if (!isLogin && !passwordIsStrong(password)) {
+      return setError('Le mot de passe ne respecte pas encore toutes les règles');
+    }
+    if (!isLogin && company?.error) return setError(company.error);
+    return run('form', () => (isLogin ? signIn(email.trim(), password, agency) : signUp(name, email.trim(), password, agency)));
+  };
 
   // Google / Apple / Microsoft : vraie connexion, l'ID agence du formulaire est utilisé
   const social = (provider) => run(provider, () => signInSocial(provider, agency));
@@ -171,13 +202,25 @@ function AuthForm({ mode, onBack, onSwitch }) {
             <Field
               icon={Building2}
               value={agency}
-              onChangeText={(v) => setAgency(v.toUpperCase())}
+              onChangeText={(v) => {
+                setAgency(v.toUpperCase());
+                setError('');
+              }}
               placeholder="ID agence"
               accessibilityLabel="ID agence"
               autoCapitalize="characters"
               autoCorrect={false}
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: company ? 6 : 12 }}
             />
+            {/* Inscription : « ✓ Agence démo Moodly » sous le code */}
+            {company && (
+              <View style={{ marginBottom: 12, marginLeft: 16, flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityLiveRegion="polite">
+                {company.name && <Check size={14} color={c.mood5} strokeWidth={3} />}
+                <T font="sans700" size={12} color={company.name ? c.mood5 : c.destructive}>
+                  {company.name ?? company.error}
+                </T>
+              </View>
+            )}
             {!isLogin && (
               <Field value={name} onChangeText={setName} placeholder="Nom complet" autoComplete="name" style={{ marginBottom: 12 }} />
             )}
@@ -193,19 +236,40 @@ function AuthForm({ mode, onBack, onSwitch }) {
             />
             <Field
               value={password}
-              onChangeText={setPassword}
-              placeholder={isLogin ? 'Mot de passe' : 'Mot de passe (8 caractères min.)'}
+              onChangeText={(v) => {
+                setPassword(v);
+                setError(''); // l'ancien message d'erreur ne correspond plus
+              }}
+              placeholder="Mot de passe"
               secureTextEntry={!show}
               autoCapitalize="none"
               autoComplete={isLogin ? 'current-password' : 'new-password'}
               onSubmitEditing={submit}
-              style={{ marginBottom: 20 }}
+              style={{ marginBottom: isLogin ? 20 : 10 }}
               right={
                 <Press onPress={() => setShow(!show)} accessibilityLabel="Afficher le mot de passe">
                   {show ? <EyeOff size={18} color={c.mutedForeground} /> : <Eye size={18} color={c.mutedForeground} />}
                 </Press>
               }
             />
+
+            {/* Inscription : les règles du mot de passe se cochent au fur et à mesure */}
+            {!isLogin && (
+              <View style={{ marginBottom: 20, marginLeft: 16, gap: 4 }}>
+                {PASSWORD_RULES.map((r) => {
+                  const ok = r.test(password);
+                  const Icon = ok ? Check : Circle;
+                  return (
+                    <View key={r.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Icon size={12} strokeWidth={ok ? 3 : 2} color={ok ? c.mood5 : c.mutedForeground} />
+                      <T font={ok ? 'sans700' : 'sans400'} size={12} color={ok ? c.mood5 : c.mutedForeground}>
+                        {r.label}
+                      </T>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
             <Press onPress={submit} disabled={Boolean(busy)}>
               <View style={{ borderRadius: 24, backgroundColor: c.primary, paddingVertical: 14, alignItems: 'center' }}>
