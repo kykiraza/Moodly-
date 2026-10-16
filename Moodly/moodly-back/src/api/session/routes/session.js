@@ -12,8 +12,12 @@ module.exports = {
       path: '/auth/login',
       handler: 'session.login',
       config: {
-        // Limite le nombre d'essais (anti force brute), comme /api/auth/local
-        middlewares: ['plugin::users-permissions.rateLimit'],
+        middlewares: [
+          // 1) Nettoie l'email (espaces, majuscules) pour que le limiteur ne soit pas contournable
+          'api::session.normalize-email',
+          // 2) Limite le nombre d'essais par email + IP (anti force brute)
+          'plugin::users-permissions.rateLimit',
+        ],
       },
     },
   ],

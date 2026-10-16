@@ -24,7 +24,8 @@ module.exports = ({ strapi }) => ({
     const usersPermissions = strapi.plugin('users-permissions');
 
     const user = await strapi.documents('plugin::users-permissions.user').findFirst({
-      filters: { provider: 'local', email: email.trim().toLowerCase() },
+      // email déjà nettoyé (trim + minuscules) par le middleware normalize-email
+      filters: { provider: 'local', email },
       fields: ['password', 'blocked', 'confirmed'],
     });
 
