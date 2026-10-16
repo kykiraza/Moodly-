@@ -10,6 +10,9 @@ module.exports = {
       method: 'GET',
       path: '/moods/today',
       handler: 'mood.today',
+      config: {
+        policies: ['global::agency-match'], // l'en-tête X-Agency-Id doit correspondre à l'agence du compte
+      },
     },
   ],
 };

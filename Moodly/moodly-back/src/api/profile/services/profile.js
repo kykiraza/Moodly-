@@ -9,6 +9,7 @@
 const APP_ROLES = ['employee', 'manager'];
 
 const pickTeam = (team) => (team ? { documentId: team.documentId, name: team.name } : null);
+const pickAgency = (agency) => (agency ? { code: agency.code, name: agency.name } : null);
 
 module.exports = ({ strapi }) => ({
   /**
@@ -16,6 +17,7 @@ module.exports = ({ strapi }) => ({
    * @returns {Promise<null | {
    *   id: number, name: string,
    *   role: 'employee' | 'manager' | null,
+   *   agency: { code: string, name: string } | null,
    *   team: { documentId: string, name: string } | null,
    *   managedTeams: { documentId: string, name: string }[]
    * }>}
@@ -23,9 +25,10 @@ module.exports = ({ strapi }) => ({
   async forUser(userId) {
     const user = await strapi.documents('plugin::users-permissions.user').findFirst({
       filters: { id: userId },
-      fields: ['username'],
+      fields: ['username', 'email'],
       populate: {
         role: { fields: ['type'] },
+        agency: { fields: ['code', 'name'] },
         team: { fields: ['name'] },
         managedTeams: { fields: ['name'], sort: 'name:asc' },
       },
@@ -36,8 +39,11 @@ module.exports = ({ strapi }) => ({
     const roleType = user.role?.type;
     return {
       id: user.id,
+      documentId: user.documentId,
       name: user.username,
+      email: user.email,
       role: APP_ROLES.includes(roleType) ? roleType : null,
+      agency: pickAgency(user.agency),
       team: pickTeam(user.team),
       managedTeams: (user.managedTeams || []).map(pickTeam),
     };

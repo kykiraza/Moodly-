@@ -5,9 +5,10 @@
  *
  * ⚠️ À lancer avec le serveur ARRÊTÉ (SQLite n'aime pas deux programmes en même temps).
  * Efface puis recrée les données de démo :
- * - 8 tags, 2 équipes, 2 managers, 10 employés (mot de passe : Moodly2026!)
- * - environ 160 saisies sur les 30 derniers jours, avec un creux de moral au milieu
- *   de la période pour l'Équipe Produit (pour que le graphe raconte une histoire)
+ * - 1 agence AG-0001, 1 équipe de 12 personnes (1 manager + 11 salariés), mot de passe Moodly2026!
+ * - les 8 raisons (tags) du prototype
+ * - environ 350 saisies sur les 60 derniers jours, avec un creux de moral il y a
+ *   2 semaines (pour que le graphe raconte une histoire)
  * - AUJOURD'HUI est laissé vide, pour pouvoir faire des saisies en direct pendant la démo.
  *
  * Les dates sont calculées à partir d'aujourd'hui : relance le seed juste avant la démo.
@@ -18,43 +19,52 @@ const { createStrapi, compileStrapi } = require('@strapi/strapi');
 const { today, addDays, isWeekend, dailyKey } = require('../src/utils/moodly');
 
 const PASSWORD = 'Moodly2026!';
-const DAYS = 30;
+const DAYS = 60; // 60 jours : 30 pour le graphe + 30 pour comparer (tendance)
 
+// Les 8 raisons du prototype (même slug que les « id » de FACTORS dans le front)
 const TAGS = [
-  { label: 'Charge de travail', slug: 'charge-de-travail', emoji: '📚' },
-  { label: "Ambiance d'équipe", slug: 'ambiance-equipe', emoji: '🤝' },
-  { label: 'Reconnaissance', slug: 'reconnaissance', emoji: '🏆' },
-  { label: 'Fatigue', slug: 'fatigue', emoji: '😴' },
-  { label: 'Projet motivant', slug: 'projet-motivant', emoji: '🚀' },
-  { label: 'Communication', slug: 'communication', emoji: '💬' },
-  { label: 'Équilibre vie pro/perso', slug: 'equilibre-vie-pro-perso', emoji: '⚖️' },
-  { label: 'Management', slug: 'management', emoji: '🧭' },
+  { label: 'Charge de travail', slug: 'charge' },
+  { label: "Ambiance d'équipe", slug: 'ambiance' },
+  { label: 'Management', slug: 'management' },
+  { label: 'Reconnaissance', slug: 'reco' },
+  { label: 'Équilibre vie pro/perso', slug: 'equilibre' },
+  { label: 'Conditions de travail', slug: 'conditions' },
+  { label: 'Missions / projets', slug: 'missions' },
+  { label: 'Personnel', slug: 'perso' },
 ];
 
-// Tags plutôt choisis quand ça va mal / quand ça va bien
-const NEGATIVE_TAGS = ['charge-de-travail', 'fatigue', 'communication', 'management'];
-const POSITIVE_TAGS = ['ambiance-equipe', 'reconnaissance', 'projet-motivant', 'equilibre-vie-pro-perso'];
+// Raisons plutôt choisies quand ça va mal / quand ça va bien
+const NEGATIVE_TAGS = ['charge', 'management', 'conditions', 'perso'];
+const POSITIVE_TAGS = ['ambiance', 'reco', 'missions', 'equilibre'];
+
+const AGENCY = { code: 'AG-0001', name: 'Agence démo Moodly' };
 
 const TEAMS = [
   {
     name: 'Équipe Produit',
-    manager: { username: 'Sarah', email: 'sarah@moodly.test' },
-    members: ['Léa', 'Hugo', 'Inès', 'Théo', 'Chloé', 'Nathan'],
-    participation: 0.72, // probabilité de répondre un jour ouvré
-    mood: (daysAgo) => (daysAgo >= 11 && daysAgo <= 17 ? 2.1 : 3.9), // creux au milieu du mois
-  },
-  {
-    name: 'Équipe Support',
-    manager: { username: 'Karim', email: 'karim@moodly.test' },
-    members: ['Emma', 'Lucas', 'Jade', 'Adam'],
-    participation: 0.85, // petite équipe : certains jours auront < 3 réponses → masqués (anonymat)
-    mood: () => 3.5,
+    manager: 'Julien Moreau',
+    members: [
+      'Camille Durand',
+      'Léa Martin',
+      'Hugo Bernard',
+      'Inès Petit',
+      'Théo Robert',
+      'Chloé Richard',
+      'Nathan Dubois',
+      'Emma Laurent',
+      'Lucas Simon',
+      'Jade Michel',
+      'Adam Lefebvre',
+    ],
+    participation: 0.75, // probabilité de répondre un jour ouvré
+    mood: (daysAgo) => (daysAgo >= 11 && daysAgo <= 17 ? 2.2 : 3.8), // creux au milieu du mois
   },
 ];
 
-// Email à partir du prénom : "Léa" → "lea@moodly.test"
+// Email à partir du nom : "Léa Martin" → "lea.martin@entreprise.fr"
+const DOMAIN = 'entreprise.fr';
 const emailOf = (name) =>
-  `${name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()}@moodly.test`;
+  `${name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '.')}@${DOMAIN}`;
 
 // Petit générateur pseudo-aléatoire (mulberry32) : même graine → mêmes données
 function random(seed) {
@@ -78,7 +88,7 @@ async function deleteAll(strapi, uid, filters = {}) {
   return docs.length;
 }
 
-async function createUser(strapi, { username, email, role, team }) {
+async function createUser(strapi, { username, email, role, team, agency }) {
   // Le Document Service chiffre (hash) le mot de passe tout seul
   return strapi.documents('plugin::users-permissions.user').create({
     data: {
@@ -89,6 +99,7 @@ async function createUser(strapi, { username, email, role, team }) {
       confirmed: true,
       blocked: false,
       role: role.documentId,
+      agency: agency.documentId,
       ...(team ? { team: team.documentId } : {}),
     },
   });
@@ -99,7 +110,15 @@ async function seed(strapi) {
   await deleteAll(strapi, 'api::mood.mood');
   await deleteAll(strapi, 'api::team.team');
   await deleteAll(strapi, 'api::tag.tag');
-  await deleteAll(strapi, 'plugin::users-permissions.user', { email: { $endsWith: '@moodly.test' } });
+  await deleteAll(strapi, 'api::agency.agency');
+  // Tous les comptes salariés/managers (démo + comptes créés par l'inscription)
+  await deleteAll(strapi, 'plugin::users-permissions.user', {
+    $or: [
+      { role: { type: { $in: ['employee', 'manager'] } } },
+      { email: { $endsWith: `@${DOMAIN}` } },
+      { email: { $endsWith: '@moodly.test' } },
+    ],
+  });
 
   // Les rôles sont créés au démarrage par src/bootstrap/permissions.js
   const roleOf = async (type) => {
@@ -116,19 +135,29 @@ async function seed(strapi) {
     tags[tag.slug] = await strapi.documents('api::tag.tag').create({ data: tag });
   }
 
+  console.log("🏢 Création de l'agence…");
+  const agency = await strapi.documents('api::agency.agency').create({ data: AGENCY });
+
   console.log('👥 Création des équipes et des comptes…');
   const end = today();
   let moodCount = 0;
 
   for (const def of TEAMS) {
-    const manager = await createUser(strapi, { ...def.manager, role: managerRole });
+    const manager = await createUser(strapi, {
+      username: def.manager,
+      email: emailOf(def.manager),
+      role: managerRole,
+      agency,
+    });
     const team = await strapi.documents('api::team.team').create({
-      data: { name: def.name, manager: manager.documentId },
+      data: { name: def.name, manager: manager.documentId, agency: agency.documentId },
     });
 
     const members = [];
     for (const name of def.members) {
-      members.push(await createUser(strapi, { username: name, email: emailOf(name), role: employeeRole, team }));
+      members.push(
+        await createUser(strapi, { username: name, email: emailOf(name), role: employeeRole, team, agency })
+      );
     }
 
     // Saisies des 29 jours précédents (daysAgo = 0 = aujourd'hui, laissé vide)
@@ -162,12 +191,12 @@ async function seed(strapi) {
     }
   }
 
-  console.log(`\n✅ Seed terminé : ${TAGS.length} tags, ${TEAMS.length} équipes, ${moodCount} saisies.`);
-  console.log(`\nComptes de démo (mot de passe : ${PASSWORD})`);
+  console.log(`\n✅ Seed terminé : 1 agence, ${TAGS.length} tags, ${TEAMS.length} équipe(s), ${moodCount} saisies.`);
+  console.log(`\nAgence : ${AGENCY.code} — comptes de démo (mot de passe : ${PASSWORD})`);
   for (const def of TEAMS) {
     console.log(`  ${def.name}`);
-    console.log(`    manager  : ${def.manager.email}`);
-    console.log(`    employés : ${def.members.map(emailOf).join(', ')}`);
+    console.log(`    manager  : ${emailOf(def.manager)}`);
+    console.log(`    salariés : ${def.members.map(emailOf).join(', ')}`);
   }
   console.log("\nAujourd'hui est vide : connecte-toi en employé pour faire une saisie en direct.");
 }

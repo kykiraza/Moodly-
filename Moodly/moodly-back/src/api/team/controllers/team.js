@@ -3,21 +3,25 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 const { envInt } = require('../../../utils/moodly');
 
+// Au moins 7 jours : sur une période trop courte, la répartition des notes et des
+// raisons deviendrait presque individuelle (anonymat).
+const MIN_DAYS = 7;
+
 /** Lit ?days= (30 par défaut). Renvoie null si la valeur est invalide. */
 function parseDays(raw) {
   if (raw === undefined || raw === '') return 30;
   const days = Number(raw);
   const max = envInt('MOOD_RETENTION_DAYS', 90); // inutile de demander plus que ce qu'on garde
-  return Number.isInteger(days) && days >= 1 && days <= max ? days : null;
+  return Number.isInteger(days) && days >= MIN_DAYS && days <= max ? days : null;
 }
 
 const badDays = (ctx) =>
-  ctx.badRequest(`days doit être un entier entre 1 et ${envInt('MOOD_RETENTION_DAYS', 90)}`);
+  ctx.badRequest(`days doit être un entier entre ${MIN_DAYS} et ${envInt('MOOD_RETENTION_DAYS', 90)}`);
 
 module.exports = createCoreController('api::team.team', ({ strapi }) => ({
   /**
    * GET /api/teams/:id/stats?days=30   (réservé au manager de l'équipe, via la policy)
-   * → { data: { team, period, minResponses, members, series, summary, tags } }
+   * → { data: { team, period, minResponses, members, series, summary, distribution, tags } }
    */
   async stats(ctx) {
     const days = parseDays(ctx.query.days);
@@ -32,7 +36,8 @@ module.exports = createCoreController('api::team.team', ({ strapi }) => ({
   /**
    * GET /api/team/stats?days=30[&team=<documentId>]
    * Même calcul, pour l'équipe du manager connecté, au format attendu par le front :
-   * → { team, daily: [{ date, mood, count, weekend, masked, open }], summary: { mood, responseRate, responses }, tags }
+   * → { team, members, daily: [{ date, mood, count, weekend, masked, open }],
+   *     summary: { mood, previousMood, trend, responseRate, responses, countedResponses }, distribution, tags }
    * « mood » vaut null quand il n'y a aucune réponse, quand la journée est masquée
    * (moins de 3 réponses) ou quand c'est aujourd'hui (open: true, journée pas finie).
    */
@@ -53,6 +58,8 @@ module.exports = createCoreController('api::team.team', ({ strapi }) => ({
     ctx.body = {
       team: stats.team,
       managedTeams: managed,
+      members: stats.members,
+      period: stats.period,
       minResponses: stats.minResponses,
       daily: stats.series.map((d) => ({
         date: d.day,
@@ -64,9 +71,13 @@ module.exports = createCoreController('api::team.team', ({ strapi }) => ({
       })),
       summary: {
         mood: stats.summary.average,
+        previousMood: stats.summary.previousAverage,
+        trend: stats.summary.trend,
         responseRate: stats.summary.participationRate,
         responses: stats.summary.responses,
+        countedResponses: stats.summary.countedResponses,
       },
+      distribution: stats.distribution,
       tags: stats.tags,
     };
   },

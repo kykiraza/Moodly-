@@ -9,4 +9,9 @@ const { createCoreRouter } = require('@strapi/strapi').factories;
 
 module.exports = createCoreRouter('api::tag.tag', {
   only: ['find'],
+  config: {
+    find: {
+      policies: ['global::agency-match'], // l'en-tête X-Agency-Id doit correspondre à l'agence du compte
+    },
+  },
 });

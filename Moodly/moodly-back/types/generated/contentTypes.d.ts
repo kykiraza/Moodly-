@@ -443,6 +443,39 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiAgencyAgency extends Struct.CollectionTypeSchema {
+  collectionName: 'agencies';
+  info: {
+    description: "Une agence (entreprise cliente). Son code (ex. AG-0001) est demand\u00E9 \u00E0 la connexion et envoy\u00E9 dans l'en-t\u00EAte X-Agency-Id.";
+    displayName: 'Agency';
+    pluralName: 'agencies';
+    singularName: 'agency';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    code: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::agency.agency'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    teams: Schema.Attribute.Relation<'oneToMany', 'api::team.team'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiMoodMood extends Struct.CollectionTypeSchema {
   collectionName: 'moods';
   info: {
@@ -523,7 +556,7 @@ export interface ApiTagTag extends Struct.CollectionTypeSchema {
 export interface ApiTeamTeam extends Struct.CollectionTypeSchema {
   collectionName: 'teams';
   info: {
-    description: 'Une \u00E9quipe : un manager et des membres (employ\u00E9s). Pas de lien vers les moods.';
+    description: "Une \u00E9quipe d'une agence : un manager et des membres (employ\u00E9s). Pas de lien vers les moods.";
     displayName: 'Team';
     pluralName: 'teams';
     singularName: 'team';
@@ -532,6 +565,7 @@ export interface ApiTeamTeam extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    agency: Schema.Attribute.Relation<'manyToOne', 'api::agency.agency'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1015,6 +1049,7 @@ export interface PluginUsersPermissionsUser
     timestamps: true;
   };
   attributes: {
+    agency: Schema.Attribute.Relation<'manyToOne', 'api::agency.agency'>;
     blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     confirmationToken: Schema.Attribute.String & Schema.Attribute.Private;
     confirmed: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
@@ -1069,6 +1104,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::agency.agency': ApiAgencyAgency;
       'api::mood.mood': ApiMoodMood;
       'api::tag.tag': ApiTagTag;
       'api::team.team': ApiTeamTeam;

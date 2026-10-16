@@ -2,13 +2,15 @@
 ### Avec l'extension VS Code « REST Client » (humao.rest-client) :
 ### clique sur « Send Request » au-dessus de chaque requête.
 ### Prérequis : npm run seed, puis npm run develop.
+### Toutes les routes protégées demandent l'en-tête X-Agency-Id (l'agence du compte).
 ### Ordre conseillé : d'abord les 2 logins (ils remplissent les tokens), puis le reste.
 
 @api = http://localhost:1337/api
 @password = Moodly2026!
+@agency = AG-0001
 
-@employeeToken = {{loginEmployee.response.body.token}}
-@managerToken = {{loginManager.response.body.token}}
+@employeeToken = {{loginEmployee.response.body.jwt}}
+@managerToken = {{loginManager.response.body.jwt}}
 @teamId = {{profileManager.response.body.managedTeams[0].documentId}}
 
 
@@ -16,27 +18,33 @@
 # 1. CONNEXION
 ############################################################
 
-### Login employé → { token, role: "employee", name }
+### Login salarié → { jwt, agencyId, role: "employee", user: {...} }
 # @name loginEmployee
 POST {{api}}/auth/login
 Content-Type: application/json
 
-{ "email": "lea@moodly.test", "password": "{{password}}" }
+{ "agencyId": "{{agency}}", "email": "camille.durand@entreprise.fr", "password": "{{password}}" }
 
-### Login manager → { token, role: "manager", name }
+### Login manager → { jwt, agencyId, role: "manager", user: {...} }
 # @name loginManager
 POST {{api}}/auth/login
 Content-Type: application/json
 
-{ "email": "sarah@moodly.test", "password": "{{password}}" }
+{ "agencyId": "{{agency}}", "email": "julien.moreau@entreprise.fr", "password": "{{password}}" }
 
 ### ❌ Mauvais mot de passe → 401
 POST {{api}}/auth/login
 Content-Type: application/json
 
-{ "email": "lea@moodly.test", "password": "faux" }
+{ "agencyId": "{{agency}}", "email": "camille.durand@entreprise.fr", "password": "faux" }
 
-### ❌ Inscription libre désactivée → 400
+### ✅ Inscription d'un salarié avec le code agence → 201 (relancer = 409 : email déjà pris)
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{ "agencyId": "{{agency}}", "name": "Zoé Test", "email": "zoe.test@exemple.fr", "password": "motdepasse1" }
+
+### ❌ Inscription Strapi standard désactivée → 400
 POST {{api}}/auth/local/register
 Content-Type: application/json
 
@@ -50,15 +58,18 @@ Content-Type: application/json
 ### Profil employé → { name, role, team, managedTeams: [] }
 GET {{api}}/profile
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 
 ### Profil manager (sert aussi à récupérer @teamId)
 # @name profileManager
 GET {{api}}/profile
 Authorization: Bearer {{managerToken}}
+X-Agency-Id: {{agency}}
 
 ### Liste des tags (pour l'écran de saisie)
 GET {{api}}/tags?fields[0]=label&fields[1]=slug&fields[2]=emoji
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 
 
 ############################################################
@@ -68,17 +79,20 @@ Authorization: Bearer {{employeeToken}}
 ### A-t-il déjà répondu aujourd'hui ? → { hasAnswered, day }
 GET {{api}}/moods/today
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 
 ### ✅ Saisie : note 1 à 5 + 0 à 3 tags (slugs) → 201
 POST {{api}}/moods
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 Content-Type: application/json
 
-{ "score": 4, "tags": ["projet-motivant", "fatigue"] }
+{ "score": 4, "tags": ["missions", "reco"] }
 
 ### ❌ 2e saisie le même jour → 409
 POST {{api}}/moods
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 Content-Type: application/json
 
 { "score": 2 }
@@ -86,6 +100,7 @@ Content-Type: application/json
 ### ❌ Note hors limites → 400
 POST {{api}}/moods
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 Content-Type: application/json
 
 { "score": 9 }
@@ -93,38 +108,49 @@ Content-Type: application/json
 ### ❌ Trop de tags → 400
 POST {{api}}/moods
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 Content-Type: application/json
 
-{ "score": 3, "tags": ["fatigue", "management", "communication", "reconnaissance"] }
+{ "score": 3, "tags": ["charge", "management", "conditions", "reco"] }
+
+### ❌ Sans en-tête X-Agency-Id (ou mauvaise agence) → 403
+GET {{api}}/profile
+Authorization: Bearer {{employeeToken}}
 
 ### ❌ Personne ne peut relire les saisies → 404 (la route n'existe pas)
 GET {{api}}/moods
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 
 
 ############################################################
 # 4. STATISTIQUES (manager)
 ############################################################
 
-### Stats de mon équipe, format du front → { team, daily, summary, tags }
+### Stats de mon équipe → { team, members, daily, summary, distribution, tags }
 GET {{api}}/team/stats?days=30
 Authorization: Bearer {{managerToken}}
+X-Agency-Id: {{agency}}
 
 ### Stats d'une équipe précise → { data: { series, summary, tags, ... } }
 GET {{api}}/teams/{{teamId}}/stats?days=30
 Authorization: Bearer {{managerToken}}
+X-Agency-Id: {{agency}}
 
 ### ❌ Un employé ne voit pas les stats → 403
 GET {{api}}/team/stats
 Authorization: Bearer {{employeeToken}}
+X-Agency-Id: {{agency}}
 
-### ❌ days invalide → 400
-GET {{api}}/team/stats?days=500
+### ❌ days invalide (entre 7 et 90) → 400
+GET {{api}}/team/stats?days=3
 Authorization: Bearer {{managerToken}}
+X-Agency-Id: {{agency}}
 
 ### ❌ Un manager ne peut pas saisir de moral → 403
 POST {{api}}/moods
 Authorization: Bearer {{managerToken}}
+X-Agency-Id: {{agency}}
 Content-Type: application/json
 
 { "score": 4 }
