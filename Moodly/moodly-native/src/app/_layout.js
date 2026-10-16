@@ -1,6 +1,6 @@
 // Racine de l'app : polices, thème et session partagés par tous les écrans.
 import { Stack } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
@@ -35,7 +35,7 @@ function Routes() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
@@ -44,7 +44,10 @@ export default function RootLayout() {
     DMSans_600SemiBold,
     DMSans_700Bold,
   });
-  if (!fontsLoaded) return null;
+  // Sur téléphone : on attend les polices (quelques millisecondes) pour éviter un « saut » d'affichage.
+  // Sur le web, on n'attend pas : Safari ne télécharge une police que quand un texte l'utilise,
+  // donc attendre avant d'afficher quoi que ce soit = écran blanc pour toujours.
+  if (!fontsLoaded && !fontError && Platform.OS !== 'web') return null;
 
   return (
     <SafeAreaProvider>
