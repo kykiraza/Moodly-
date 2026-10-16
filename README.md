@@ -7,7 +7,8 @@ voit le moral de son équipe sur 30 jours, uniquement en données agrégées.
 | Dossier                                   | Contenu                                                  |
 | ----------------------------------------- | -------------------------------------------------------- |
 | [`Moodly/moodly-back`](Moodly/moodly-back) | API **Strapi 5** (SQLite) : auth, rôles, saisies anonymes, stats |
-| [`Moodly/moodly-vue`](Moodly/moodly-vue)   | App **Vue 3 + Capacitor** (Android / iOS / navigateur)   |
+| [`Moodly/moodly-native`](Moodly/moodly-native) | App **React Native (Expo)** pour iPhone et Android, connexion Google / Apple / Microsoft |
+| [`Moodly/moodly-vue`](Moodly/moodly-vue)   | App **Vue 3 + Capacitor** (version conforme à la stack imposée par le sujet) |
 
 ## Démarrage rapide
 
@@ -17,10 +18,10 @@ cd Moodly/moodly-back
 npm install && npm run setup && npm run seed
 npm run develop                      # http://localhost:1337
 
-# 2. L'app (terminal 2)
-cd Moodly/moodly-vue
-npm install && cp .env.example .env
-npm run dev                          # http://localhost:5173
+# 2. L'app React Native (terminal 2)
+cd Moodly/moodly-native
+npm install && cp .env.example .env.local
+npx expo start --web                 # navigateur ; --go pour Expo Go sur téléphone
 ```
 
 Connexion : agence **AG-0001**, `camille.durand@entreprise.fr` (salarié) ou
