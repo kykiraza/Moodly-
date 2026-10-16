@@ -53,8 +53,9 @@ export async function getToday(userId) {
 
 export const clearHistory = (userId) => removeKey(journalKey(userId));
 
-// Pour la démo : jours d'exemple (marqués « Exemple de démo »). Mettre false pour les retirer.
-export const SHOW_DEMO_HISTORY = true;
+// Jours d'exemple inventés (marqués « Exemple de démo »). Désactivé : le calendrier
+// n'affiche que les vrais check-ins faits sur ce téléphone. Mettre true pour une démo.
+export const SHOW_DEMO_HISTORY = false;
 
 function demoHistory() {
   const out = {};

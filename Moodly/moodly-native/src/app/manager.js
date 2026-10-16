@@ -258,10 +258,10 @@ function ManagerScreen() {
             </Svg>
             </View>
             <View style={{ marginTop: 4, flexDirection: 'row', justifyContent: 'space-between' }}>
-              <T size={10} color={c.mutedForeground}>
+              <T size={10} color={c.foreground}>
                 Super ↑
               </T>
-              <T size={10} color={c.mutedForeground}>
+              <T size={10} color={c.foreground}>
                 Pas bien ↓
               </T>
             </View>
