@@ -89,7 +89,7 @@ export function MoodCalendar({ getDay, selected, onSelect }) {
         {LEVELS.map((l) => (
           <View key={l} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <View style={{ width: 10, height: 10, borderRadius: 999, backgroundColor: c[`mood${l}`] }} />
-            <T font="sans600" size={10} color={c.mutedForeground}>
+            <T font="sans600" size={10} color={c.foreground}>
               {moodInfo(c, l).label}
             </T>
           </View>

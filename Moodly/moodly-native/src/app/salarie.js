@@ -211,7 +211,8 @@ function SalarieScreen() {
                     ]}
                   >
                     <Mascot mood={l} size={32} />
-                    <T font="sans700" size={11} color={c.ink}>
+                    {/* foreground : foncé en mode clair, blanc en mode sombre */}
+                    <T font="sans700" size={11} color={c.foreground}>
                       {moodInfo(c, l).label}
                     </T>
                   </View>

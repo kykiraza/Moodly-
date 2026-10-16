@@ -1,8 +1,8 @@
 // Mon espace : calendrier d'humeurs personnel.
 // Les données viennent UNIQUEMENT du téléphone (journal local) : le serveur ne sait pas qui a répondu quoi.
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Lock } from 'lucide-react-native';
 import { LEVELS, factorById, getHistory, longDate, mood as moodInfo, parseDay } from '@/lib/moods';
 import { useAuth } from '@/lib/session';
@@ -21,9 +21,12 @@ function EspaceSalarieScreen() {
   const [sel, setSel] = useState(null);
 
   const userId = session?.user.id; // undefined pendant une déconnexion
-  useEffect(() => {
-    if (userId) getHistory(userId).then(setHist);
-  }, [userId]);
+  // Relu à chaque fois que l'écran s'affiche : le check-in du jour apparaît tout de suite
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) getHistory(userId).then(setHist);
+    }, [userId]),
+  );
 
   // Les saisies des 30 derniers jours
   const last30 = useMemo(() => {
