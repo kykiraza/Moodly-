@@ -6,7 +6,7 @@ le manager voit le moral de son équipe, **sans jamais savoir qui a répondu quo
 - Strapi **5.58**, en JavaScript
 - Base **SQLite** (un simple fichier : `.tmp/data.db`)
 - Node.js **22 ou 24**
-- L'app mobile (Vue 3 + Capacitor) est dans [`../moodly-vue`](../moodly-vue)
+- Les apps : React Native / Expo dans [`../moodly-native`](../moodly-native), Vue 3 + Capacitor dans [`../moodly-vue`](../moodly-vue)
 
 ---
 
@@ -55,6 +55,7 @@ X-Agency-Id: AG-0001
 | ------- | -------------------------- | -------------- | ----------------------------------------------------------------- |
 | POST    | `/auth/login`              | tout le monde  | `{ agencyId, email, password }` → session                         |
 | POST    | `/auth/register`           | tout le monde  | `{ agencyId, name, email, password }` → session (compte salarié)  |
+| POST    | `/auth/social`             | tout le monde  | `{ agencyId, provider, idToken, name? }` → session (Google / Apple / Microsoft) |
 | GET     | `/profile`                 | connecté       | `{ name, email, role, agency, team, managedTeams }`               |
 | GET     | `/tags`                    | connecté       | les 8 raisons proposées                                           |
 | POST    | `/moods`                   | salarié        | `{ level: 1..5, factors: ["charge", ...] }` → 201                 |
@@ -72,6 +73,21 @@ La **session** renvoyée par le login et l'inscription :
   "user": { "id": "tip4f65…", "email": "camille.durand@entreprise.fr", "username": "Camille Durand", "role": "employee" }
 }
 ```
+
+### Connexion avec Google / Apple / Microsoft (`POST /auth/social`)
+
+L'app obtient un **ID token** auprès du fournisseur et l'envoie avec `provider` (`google`, `apple`
+ou `microsoft`) et l'ID agence. Le serveur (`src/api/session/services/social.js`, bibliothèque
+`jose`) vérifie **la signature** avec les clés publiques du fournisseur, l'émetteur, que le jeton est
+destiné à notre app (identifiants client du `.env`), l'expiration et que l'email est vérifié. Puis :
+
+- un compte existe avec cet email → il est connecté (même agence obligatoire) ;
+- sinon → un **compte salarié** est créé dans l'équipe de l'agence, sans mot de passe ;
+- par prudence, un login Microsoft n'est jamais relié à un compte créé autrement (409).
+
+Tant qu'un fournisseur n'a pas d'identifiant client dans `.env` (`GOOGLE_CLIENT_IDS`,
+`APPLE_CLIENT_IDS`, `MICROSOFT_CLIENT_ID`), la route répond **503 « pas encore configurée »**.
+Le guide pour créer les identifiants : `Moodly/moodly-native/GUIDE-CONNEXION-SOCIALE.md`.
 
 Pour `POST /moods`, `score` / `mood` sont acceptés à la place de `level`, et `tags` à la place de
 `factors`. Tout autre champ (par exemple un message libre) est **ignoré**.
@@ -168,7 +184,8 @@ moodly-back/
 │   │   ├── team/              stats manager (+ policy is-team-manager)
 │   │   ├── tag/               GET /tags (les 8 raisons)
 │   │   ├── profile/           GET /profile (+ service réutilisé partout)
-│   │   └── session/           POST /auth/login et /auth/register
+│   │   └── session/           POST /auth/login, /auth/register et /auth/social
+│   │                          (services/social.js : vérification des jetons Google/Apple/Microsoft)
 │   └── extensions/users-permissions/content-types/user/schema.json
 │                              ajoute agency, team et managedTeams au User
 └── requests.http              tests des routes (extension REST Client)
@@ -192,3 +209,6 @@ moodly-back/
 | `MOOD_RETENTION_DAYS` | `90`            | durée de conservation des saisies                     |
 | `APP_TIMEZONE`        | `Europe/Paris`  | fuseau qui définit « aujourd'hui »                    |
 | `DATABASE_FILENAME`   | `.tmp/data.db`  | fichier SQLite                                        |
+| `GOOGLE_CLIENT_IDS`   | (vide)          | ID client OAuth Google (iOS, Android, Web), séparés par des virgules |
+| `APPLE_CLIENT_IDS`    | `fr.moodly.app` | bundle ID de l'app iOS (Sign in with Apple)           |
+| `MICROSOFT_CLIENT_ID` | (vide)          | ID d'application de l'app Azure / Entra ID            |
