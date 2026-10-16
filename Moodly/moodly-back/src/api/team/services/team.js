@@ -9,8 +9,12 @@
  * 2. Les réponses des jours masqués sont AUSSI exclues de la moyenne globale et des tags.
  *    Sinon on pourrait les retrouver par soustraction : (total sur 30 jours aujourd'hui)
  *    − (total sur 30 jours hier) = les réponses d'un seul jour.
- * 3. Seul le NOMBRE de réponses (la participation) inclut tous les jours :
- *    il ne dit rien du moral de qui que ce soit.
+ * 3. La journée EN COURS (aujourd'hui) n'est jamais publiée : moyenne null, et ses
+ *    réponses sont exclues de la moyenne globale et des tags. Sinon, en rafraîchissant
+ *    avant et après qu'une personne réponde (3 → 4 réponses), on retrouverait sa note
+ *    et ses tags exacts. Les chiffres d'un jour sont publiés le lendemain, figés.
+ * 4. Seul le NOMBRE de réponses (la participation) inclut tous les jours, aujourd'hui
+ *    compris : il ne dit rien du moral de qui que ce soit.
  */
 
 const { createCoreService } = require('@strapi/strapi').factories;
@@ -63,15 +67,18 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
       const dayMoods = byDay.get(day) || [];
       const weekend = isWeekend(day);
       const responses = dayMoods.length;
-      const masked = responses > 0 && responses < minResponses;
+      const open = day === to; // aujourd'hui : la journée n'est pas finie
+      const masked = !open && responses > 0 && responses < minResponses;
+      const published = !open && responses >= minResponses; // moyenne visible ?
 
-      if (!weekend) {
+      // La participation est calculée sur les jours ouvrés TERMINÉS
+      if (!weekend && !open) {
         weekdays += 1;
         weekdayResponses += responses;
       }
       if (masked) maskedDays += 1;
 
-      if (responses >= minResponses) {
+      if (published) {
         for (const mood of dayMoods) {
           visibleScores.push(mood.score);
           for (const tag of mood.tags || []) {
@@ -86,8 +93,9 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
         day,
         weekend,
         responses,
-        average: responses >= minResponses ? average(dayMoods.map((mood) => mood.score)) : null,
+        average: published ? average(dayMoods.map((mood) => mood.score)) : null,
         masked,
+        open,
       });
     }
 
@@ -103,7 +111,7 @@ module.exports = createCoreService('api::team.team', ({ strapi }) => ({
       summary: {
         responses: moods.length,
         average: average(visibleScores),
-        // Taux de participation sur les jours ouvrés, en % (0 à 100)
+        // Taux de participation sur les jours ouvrés terminés, en % (0 à 100)
         participationRate: expected > 0 ? Math.min(100, Math.round((weekdayResponses / expected) * 100)) : null,
         maskedDays,
       },

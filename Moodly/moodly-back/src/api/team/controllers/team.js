@@ -32,8 +32,9 @@ module.exports = createCoreController('api::team.team', ({ strapi }) => ({
   /**
    * GET /api/team/stats?days=30[&team=<documentId>]
    * Même calcul, pour l'équipe du manager connecté, au format attendu par le front :
-   * → { team, daily: [{ date, mood, count, weekend, masked }], summary: { mood, responseRate, responses }, tags }
-   * « mood » vaut null quand la journée est masquée (moins de 3 réponses).
+   * → { team, daily: [{ date, mood, count, weekend, masked, open }], summary: { mood, responseRate, responses }, tags }
+   * « mood » vaut null quand il n'y a aucune réponse, quand la journée est masquée
+   * (moins de 3 réponses) ou quand c'est aujourd'hui (open: true, journée pas finie).
    */
   async myStats(ctx) {
     const days = parseDays(ctx.query.days);
@@ -59,6 +60,7 @@ module.exports = createCoreController('api::team.team', ({ strapi }) => ({
         count: d.responses,
         weekend: d.weekend,
         masked: d.masked,
+        open: d.open,
       })),
       summary: {
         mood: stats.summary.average,
