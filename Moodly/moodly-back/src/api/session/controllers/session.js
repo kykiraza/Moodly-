@@ -25,7 +25,10 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Règles du mot de passe (les mêmes sont affichées dans l'app : src/lib/password.js) :
  * 8 caractères minimum, 1 majuscule, 1 chiffre, 1 caractère spécial.
  * Le serveur vérifie lui-même : on ne fait jamais confiance à l'app seule.
+ * ⚠️ Désactivé par défaut (démo : n'importe quel mot de passe est accepté).
+ * Pour exiger ces règles : STRONG_PASSWORD=true dans le .env, puis redémarrer le back.
  */
+const STRONG_PASSWORD = process.env.STRONG_PASSWORD === 'true';
 const PASSWORD_RULES_MESSAGE =
   'Le mot de passe doit contenir au moins 8 caractères, 1 majuscule, 1 chiffre et 1 caractère spécial';
 function passwordIsStrong(password) {
@@ -75,7 +78,7 @@ async function createEmployee(strapi, { agencyId, name, email, password, provide
 
   const users = strapi.documents('plugin::users-permissions.user');
   if (await users.findFirst({ filters: { email }, fields: ['id'] })) {
-    return { error: [409, 'Un compte existe déjà avec cet email'] };
+    return { error: [409, 'Un compte existe déjà avec cet email : connecte-toi'] };
   }
 
   // Le nom d'utilisateur doit être unique dans Strapi : "Camille Durand", "Camille Durand 2"...
@@ -161,14 +164,14 @@ module.exports = ({ strapi }) => ({
     const { agencyId, name, email, password } = ctx.request.body || {};
 
     // 1) Valider les champs
-    const cleanName = typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '';
-    if (cleanName.length < 2 || cleanName.length > 50) {
-      return ctx.badRequest('Le nom doit faire entre 2 et 50 caractères');
-    }
     if (typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
-      return ctx.badRequest('Email invalide');
+      return ctx.badRequest('Email invalide (ex. prenom@exemple.fr)');
     }
-    if (!passwordIsStrong(password)) return ctx.badRequest(PASSWORD_RULES_MESSAGE);
+    // Nom facultatif : sans nom, on prend le début de l'email (« zoe.martin@… » → « zoe.martin »)
+    const typed = typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '';
+    const cleanName = (typed || email.split('@')[0]).slice(0, 50);
+    if (typeof password !== 'string' || !password) return ctx.badRequest('Mot de passe obligatoire');
+    if (STRONG_PASSWORD && !passwordIsStrong(password)) return ctx.badRequest(PASSWORD_RULES_MESSAGE);
     // bcrypt ne prend en compte que les 72 premiers octets d'un mot de passe
     if (Buffer.byteLength(password) > 72) return ctx.badRequest('Le mot de passe est trop long');
 

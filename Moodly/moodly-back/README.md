@@ -54,7 +54,7 @@ X-Agency-Id: AG-0001
 | Méthode | Route                      | Qui ?          | Rôle                                                              |
 | ------- | -------------------------- | -------------- | ----------------------------------------------------------------- |
 | POST    | `/auth/login`              | tout le monde  | `{ agencyId, email, password }` → session                         |
-| POST    | `/auth/register`           | tout le monde  | `{ agencyId, name, email, password }` → session (compte salarié). Mot de passe : 8 caractères min., 1 majuscule, 1 chiffre, 1 caractère spécial |
+| POST    | `/auth/register`           | tout le monde  | `{ agencyId, name, email, password }` → session (compte salarié). Nom facultatif. Mot de passe libre, sauf si `STRONG_PASSWORD=true` (8 caractères min., 1 majuscule, 1 chiffre, 1 caractère spécial) |
 | GET     | `/auth/agency?code=AG-0001` | tout le monde  | `{ code, name }` : nom de l'entreprise (404 si inconnu, 20 essais/min par IP) |
 | POST    | `/auth/social`             | tout le monde  | `{ agencyId, provider, idToken, name? }` → session (Google / Apple / Microsoft) |
 | GET     | `/profile`                 | connecté       | `{ name, email, role, agency, team, managedTeams }`               |
