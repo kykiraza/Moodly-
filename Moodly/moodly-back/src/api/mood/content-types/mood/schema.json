@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "moods",
+  "info": {
+    "singularName": "mood",
+    "pluralName": "moods",
+    "displayName": "Mood",
+    "description": "Une saisie ANONYME : jamais de lien vers un User, jamais de texte libre. dailyKey sert seulement à bloquer une 2e saisie le même jour."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "day": {
+      "type": "date",
+      "required": true
+    },
+    "score": {
+      "type": "integer",
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag"
+    },
+    "team": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team.team"
+    },
+    "dailyKey": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "private": true
+    }
+  }
+}

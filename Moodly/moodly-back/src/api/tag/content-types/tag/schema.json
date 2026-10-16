@@ -1,0 +1,30 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tags",
+  "info": {
+    "singularName": "tag",
+    "pluralName": "tags",
+    "displayName": "Tag",
+    "description": "Raison possible du moral du jour (0 à 3 tags par saisie). Pas de lien retour vers les moods : impossible de remonter aux saisies."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 40
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "label",
+      "required": true
+    },
+    "emoji": {
+      "type": "string",
+      "maxLength": 8
+    }
+  }
+}
