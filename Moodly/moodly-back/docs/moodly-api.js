@@ -5,16 +5,20 @@
  * - Mêmes noms de fonctions que le type `Api` du front (src/services/types.ts),
  *   plus getProfile() et getTags().
  *
- * Configuration (fichier .env du projet Expo) :
- *   EXPO_PUBLIC_API_URL=http://192.168.1.42:1337/api
+ * À copier dans le front : src/services/moodly-api.js
+ *
+ * Configuration : l'adresse vient de API_URL dans src/config.ts (comme realApi.ts),
+ *   ex. export const API_URL = 'http://192.168.1.42:1337/api';
+ * On peut aussi la surcharger avec EXPO_PUBLIC_API_URL dans le .env du projet Expo.
  *   ⚠️ L'IP locale du Mac qui fait tourner Strapi, PAS « localhost » : sur le téléphone,
  *   localhost désigne le téléphone lui-même. Téléphone et Mac sur le même wifi.
- *   (Pour trouver l'IP du Mac : Réglages → Wi-Fi → Détails, ou `ipconfig getifaddr en0`.)
+ *   (Pour trouver l'IP du Mac : `ipconfig getifaddr en0` dans le Terminal.)
  */
 
 import * as SecureStore from 'expo-secure-store';
+import { API_URL as CONFIG_API_URL } from '../config';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const API_URL = process.env.EXPO_PUBLIC_API_URL || CONFIG_API_URL;
 const TOKEN_KEY = 'moodly-token';
 
 /** Erreur avec le code HTTP, pour que l'écran puisse réagir (401 → login, 409 → déjà répondu…). */
@@ -101,7 +105,7 @@ export async function hasAnsweredToday() {
  * Stats de l'équipe du manager connecté.
  * → {
  *     team: { documentId, name },
- *     daily: [{ date, mood (null si masqué), count, weekend, masked }],
+ *     daily: [{ date, mood (null si 0 réponse, masqué ou aujourd'hui), count, weekend, masked, open }],
  *     summary: { mood, responseRate (en %), responses },
  *     tags: [{ slug, label, emoji, count }],
  *     minResponses

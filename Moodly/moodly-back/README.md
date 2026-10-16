@@ -52,8 +52,9 @@ le header `Authorization: Bearer <token>`.
 | GET     | `/team/stats?days=30`    | manager  | stats de **son** équipe, au format du front                |
 | GET     | `/teams/:id/stats?days=30` | manager de l'équipe | même calcul, format Strapi `{ data: ... }`  |
 
-Codes d'erreur utilisés : **400** données invalides, **401** pas connecté / token expiré,
-**403** pas le droit, **409** déjà répondu aujourd'hui.
+Codes d'erreur utilisés : **400** données invalides, **401** mauvais identifiants ou token
+invalide/expiré, **403** pas de token ou pas le droit, **409** déjà répondu aujourd'hui,
+**429** trop de tentatives de connexion.
 
 La route Strapi standard `POST /auth/local` (`{ identifier, password }` → `{ jwt, user }`) marche aussi.
 
@@ -67,16 +68,20 @@ La route Strapi standard `POST /auth/local` (`{ identifier, password }` → `{ j
   "team": { "documentId": "cjg1…", "name": "Équipe Produit" },
   "minResponses": 3,
   "daily": [
-    { "date": "2026-10-15", "mood": 4, "count": 4, "weekend": false, "masked": false },
-    { "date": "2026-10-16", "mood": null, "count": 1, "weekend": false, "masked": true }
+    { "date": "2026-10-14", "mood": null, "count": 2, "weekend": false, "masked": true, "open": false },
+    { "date": "2026-10-15", "mood": 4, "count": 4, "weekend": false, "masked": false, "open": false },
+    { "date": "2026-10-16", "mood": null, "count": 3, "weekend": false, "masked": false, "open": true }
   ],
   "summary": { "mood": 3.5, "responseRate": 74, "responses": 102 },
   "tags": [{ "slug": "reconnaissance", "label": "Reconnaissance", "emoji": "🏆", "count": 30 }]
 }
 ```
 
-- `mood` = moyenne des notes du jour, **`null` si moins de 3 réponses** (`masked: true`).
-- `responseRate` = taux de participation en %, calculé sur les jours ouvrés (lundi → vendredi).
+- `mood` = moyenne des notes du jour. Elle vaut `null` quand :
+  il n'y a aucune réponse (`count: 0`), il y a moins de 3 réponses (`masked: true`),
+  ou c'est **aujourd'hui** (`open: true`) : la moyenne d'un jour n'est publiée que le lendemain.
+- `count` = nombre de réponses (visible en direct, même aujourd'hui).
+- `responseRate` = taux de participation en %, sur les jours ouvrés (lundi → vendredi) terminés.
 
 ---
 
@@ -93,11 +98,14 @@ La route Strapi standard `POST /auth/local` (`{ identifier, password }` → `{ j
    masquée. Les jours masqués sont **aussi exclus de la moyenne globale et des tags** : sinon, en
    comparant les stats d'aujourd'hui et d'hier, on pourrait retrouver les réponses d'un seul jour
    par soustraction.
-5. **L'équipe vient toujours de la base** (via le token), jamais du body de la requête : un employé ne
+5. **La journée en cours n'est jamais publiée** (seul le nombre de réponses l'est). Sinon le manager
+   pourrait rafraîchir avant et après qu'un collègue réponde (3 → 4 réponses) et en déduire sa note
+   et ses tags exacts. La moyenne d'un jour apparaît le lendemain, quand elle ne bouge plus.
+6. **L'équipe vient toujours de la base** (via le token), jamais du body de la requête : un employé ne
    peut pas « polluer » les stats d'une autre équipe.
-6. **Durée de conservation limitée** : chaque nuit à 3h, les saisies de plus de `MOOD_RETENTION_DAYS`
+7. **Durée de conservation limitée** : chaque nuit à 3h, les saisies de plus de `MOOD_RETENTION_DAYS`
    (90) jours sont supprimées (`config/cron-tasks.js`).
-7. **Pas d'inscription libre** : les comptes sont créés par l'admin.
+8. **Pas d'inscription libre** : les comptes sont créés par l'admin.
 
 **Limite connue (à dire honnêtement à l'oral)** : c'est une *pseudonymisation* forte, pas un anonymat
 absolu. Quelqu'un qui aurait à la fois la base de données ET la clé `MOOD_SALT` pourrait recalculer
@@ -166,9 +174,9 @@ sujet : **une note + des tags**. Les routes reprennent les noms du front, il res
    à la place de `score` ; `workload` et `atmosphere` sont ignorés.)
 3. **Écran de saisie** : une seule question (1 à 5) + une liste de tags à cocher (0 à 3),
    chargée avec `GET /tags`.
-4. **`types.ts` → `DailyStat`** : `{ date, mood: number | null, count, weekend, masked }` et
-   `summary: { mood: number | null, responseRate: number | null, responses }`. Afficher « pas assez
-   de réponses » quand `mood` vaut `null`.
+4. **`types.ts` → `DailyStat`** : `{ date, mood: number | null, count, weekend, masked, open }` et
+   `summary: { mood: number | null, responseRate: number | null, responses }`. Quand `mood` vaut
+   `null` : « pas assez de réponses » si `masked`, « en cours » si `open` (aujourd'hui).
 5. **Vue manager** : un seul graphe (`mood` par jour) + éventuellement la liste `tags`.
 6. Erreurs à gérer : **409** à l'envoi → « déjà répondu aujourd'hui » ; **401** n'importe où →
    token expiré (7 jours), revenir à l'écran de login.
