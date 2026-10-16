@@ -1,7 +1,23 @@
 // 🌐 Client de l'API Strapi : tous les appels réseau passent par ici.
 // Il ajoute le token (Authorization) et l'agence (X-Agency-Id) de la session en cours.
 
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:1337/api').replace(/\/$/, '');
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+/**
+ * Adresse de l'API. Sur un téléphone, « localhost » désigne le téléphone lui-même :
+ * en développement (Expo Go), on la remplace par l'IP du Mac qui fait tourner Expo
+ * (Constants.expoConfig.hostUri, ex. « 192.168.1.42:8081 »). Le back doit être sur ce même Mac.
+ */
+function apiUrl() {
+  const url = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:1337/api').replace(/\/$/, '');
+  const macIp = Constants.expoConfig?.hostUri?.split(':')[0];
+  if (__DEV__ && Platform.OS !== 'web' && macIp && /localhost|127\.0\.0\.1/.test(url)) {
+    return url.replace(/localhost|127\.0\.0\.1/, macIp);
+  }
+  return url;
+}
+export const API_URL = apiUrl();
 
 // La session courante est donnée par AuthProvider (src/lib/session.js)
 let current = null;

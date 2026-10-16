@@ -35,6 +35,7 @@
   },
   "scripts": {
     "start": "expo start",
+    "telephone": "expo start --go --lan",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
