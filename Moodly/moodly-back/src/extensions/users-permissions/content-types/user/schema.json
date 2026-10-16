@@ -14,7 +14,7 @@
   "attributes": {
     "username": {
       "type": "string",
-      "minLength": 3,
+      "minLength": 1,
       "unique": true,
       "configurable": false,
       "required": true
@@ -31,7 +31,7 @@
     },
     "password": {
       "type": "password",
-      "minLength": 6,
+      "minLength": 1,
       "configurable": false,
       "private": true,
       "searchable": false

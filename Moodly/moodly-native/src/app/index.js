@@ -7,7 +7,7 @@ import { Redirect } from 'expo-router';
 import { homeFor } from '@/components/RoleGate';
 import { ArrowLeft, Building2, Check, Circle, Eye, EyeOff, Lock } from 'lucide-react-native';
 import { api } from '@/lib/api';
-import { PASSWORD_RULES, passwordIsStrong } from '@/lib/password';
+import { PASSWORD_RULES } from '@/lib/password';
 import { useAuth } from '@/lib/session';
 import { alpha, FONTS, useTheme } from '@/lib/theme';
 import { Screen } from '@/components/Screen';
@@ -171,9 +171,6 @@ function AuthForm({ mode, onBack, onSwitch }) {
   }
 
   const submit = () => {
-    if (!isLogin && !passwordIsStrong(password)) {
-      return setError('Le mot de passe ne respecte pas encore toutes les règles');
-    }
     if (!isLogin && company?.error) return setError(company.error);
     return run('form', () => (isLogin ? signIn(email.trim(), password, agency) : signUp(name, email.trim(), password, agency)));
   };
@@ -222,7 +219,7 @@ function AuthForm({ mode, onBack, onSwitch }) {
               </View>
             )}
             {!isLogin && (
-              <Field value={name} onChangeText={setName} placeholder="Nom complet" autoComplete="name" style={{ marginBottom: 12 }} />
+              <Field value={name} onChangeText={setName} placeholder="Nom complet (facultatif)" autoComplete="name" style={{ marginBottom: 12 }} />
             )}
             <Field
               value={email}
@@ -245,7 +242,7 @@ function AuthForm({ mode, onBack, onSwitch }) {
               autoCapitalize="none"
               autoComplete={isLogin ? 'current-password' : 'new-password'}
               onSubmitEditing={submit}
-              style={{ marginBottom: isLogin ? 20 : 10 }}
+              style={{ marginBottom: isLogin || !password ? 20 : 10 }}
               right={
                 <Press onPress={() => setShow(!show)} accessibilityLabel="Afficher le mot de passe">
                   {show ? <EyeOff size={18} color={c.mutedForeground} /> : <Eye size={18} color={c.mutedForeground} />}
@@ -253,9 +250,12 @@ function AuthForm({ mode, onBack, onSwitch }) {
               }
             />
 
-            {/* Inscription : les règles du mot de passe se cochent au fur et à mesure */}
-            {!isLogin && (
+            {/* Inscription : conseils pour un mot de passe solide (cochés au fur et à mesure, non bloquants) */}
+            {!isLogin && !!password && (
               <View style={{ marginBottom: 20, marginLeft: 16, gap: 4 }}>
+                <T font="sans600" size={11} color={c.mutedForeground}>
+                  Conseillé pour un mot de passe solide :
+                </T>
                 {PASSWORD_RULES.map((r) => {
                   const ok = r.test(password);
                   const Icon = ok ? Check : Circle;
