@@ -76,13 +76,24 @@
       "relation": "oneToMany",
       "target": "api::team.team",
       "mappedBy": "manager"
+    },
+    "agency": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::agency.agency"
     }
   },
   "config": {
     "attributes": {
-      "resetPasswordToken": { "hidden": true },
-      "confirmationToken": { "hidden": true },
-      "provider": { "hidden": true }
+      "resetPasswordToken": {
+        "hidden": true
+      },
+      "confirmationToken": {
+        "hidden": true
+      },
+      "provider": {
+        "hidden": true
+      }
     }
   }
 }

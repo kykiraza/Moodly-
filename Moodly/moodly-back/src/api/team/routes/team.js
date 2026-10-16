@@ -12,7 +12,7 @@ module.exports = {
       path: '/teams/:id/stats',
       handler: 'team.stats',
       config: {
-        policies: ['api::team.is-team-manager'],
+        policies: ['global::agency-match', 'api::team.is-team-manager'],
       },
     },
     {
@@ -20,6 +20,9 @@ module.exports = {
       method: 'GET',
       path: '/team/stats',
       handler: 'team.myStats',
+      config: {
+        policies: ['global::agency-match'],
+      },
     },
   ],
 };

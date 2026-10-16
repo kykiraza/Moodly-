@@ -5,7 +5,7 @@
     "singularName": "team",
     "pluralName": "teams",
     "displayName": "Team",
-    "description": "Une équipe : un manager et des membres (employés). Pas de lien vers les moods."
+    "description": "Une équipe d'une agence : un manager et des membres (employés). Pas de lien vers les moods."
   },
   "options": {
     "draftAndPublish": false
@@ -27,6 +27,12 @@
       "relation": "oneToMany",
       "target": "plugin::users-permissions.user",
       "mappedBy": "team"
+    },
+    "agency": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::agency.agency",
+      "inversedBy": "teams"
     }
   }
 }
