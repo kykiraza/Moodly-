@@ -36,6 +36,7 @@ const ROLES = [
 // Ajoutées au rôle Public (visiteur non connecté), sans toucher à ses autres permissions
 const PUBLIC_ACTIONS = [
   'api::session.session.login', // POST /api/auth/login
+  'api::session.session.register', // POST /api/auth/register
 ];
 
 async function findOrCreateRole(strapi, { type, name, description }) {
