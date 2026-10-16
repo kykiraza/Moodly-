@@ -24,9 +24,11 @@ const deniedTypes = [
 module.exports = () => ({
   'users-permissions': {
     config: {
-      jwtManagement: 'refresh',
-      sessions: {
-        httpOnly: true,
+      // Moodly : un token JWT simple, gardé par l'app mobile dans SecureStore.
+      // Le mode 'refresh' (token court + cookie) est pensé pour le web, pas pour Expo.
+      jwtManagement: 'legacy-support',
+      jwt: {
+        expiresIn: '7d', // au bout de 7 jours, l'API répond 401 → l'app renvoie vers le login
       },
     },
   },

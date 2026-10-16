@@ -2,8 +2,10 @@
   "name": "moodly-back",
   "version": "0.1.0",
   "private": true,
-  "description": "A Strapi application",
+  "description": "Moodly — API Strapi du suivi de moral anonyme (projet Epitech Digital)",
   "scripts": {
+    "setup": "node scripts/setup-env.js",
+    "seed": "node scripts/seed.js",
     "build": "strapi build",
     "console": "strapi console",
     "deploy": "strapi deploy",
