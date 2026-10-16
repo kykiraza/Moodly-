@@ -105,8 +105,10 @@ https://expo.dev.
 ## 6. Tester rapidement sans compiler (Expo Go)
 
 ```bash
-npx expo start --go   # puis scanne le QR code avec l'app Expo Go (même Wi-Fi)
+npm run telephone   # puis scanne le QR code avec l'appareil photo de l'iPhone (même Wi-Fi que le Mac)
 ```
 
-Tout marche dans Expo Go **sauf** Google et Microsoft (ils ont besoin de l'app compilée). Apple
-fonctionne dans Expo Go sur iPhone.
+Le back doit tourner sur le même Mac : l'app remplace toute seule `localhost` par l'IP du Mac.
+
+Tout marche dans Expo Go **sauf** Google, Apple et Microsoft : ils ont besoin de l'app compilée
+(dans Expo Go, le jeton est émis pour « Expo Go » et non pour `fr.moodly.app`, le back le refuse).
