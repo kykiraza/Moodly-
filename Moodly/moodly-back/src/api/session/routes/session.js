@@ -2,7 +2,7 @@
 
 /**
  * Routes publiques (pas besoin d'être connecté pour se connecter ou s'inscrire !).
- * Les permissions « api::session.session.login » et « .register » sont données au
+ * Les permissions « api::session.session.login », « .register » et « .social » sont données au
  * rôle Public dans src/bootstrap/permissions.js.
  */
 const middlewares = [
@@ -24,6 +24,12 @@ module.exports = {
       method: 'POST',
       path: '/auth/register',
       handler: 'session.register',
+      config: { middlewares },
+    },
+    {
+      method: 'POST',
+      path: '/auth/social',
+      handler: 'session.social',
       config: { middlewares },
     },
   ],

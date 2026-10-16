@@ -3,8 +3,10 @@
 /**
  * Connexion et inscription au format attendu par l'app (session = { jwt, agencyId, user }).
  *
- * POST /api/auth/login     { agencyId, email, password }        → 200 + session
- * POST /api/auth/register  { agencyId, name, email, password }  → 201 + session
+ * POST /api/auth/login     { agencyId, email, password }              → 200 + session
+ * POST /api/auth/register  { agencyId, name, email, password }        → 201 + session
+ * POST /api/auth/social    { agencyId, provider, idToken, name? }     → 200/201 + session
+ *                          provider = 'google' | 'apple' | 'microsoft'
  *
  * La route Strapi standard POST /api/auth/local existe toujours, mais elle ne
  * vérifie pas l'agence et ne renvoie pas le rôle Moodly.
@@ -36,6 +38,53 @@ async function buildSession(strapi, userId) {
       role: profile.role,
     },
   };
+}
+
+/**
+ * Crée un compte salarié dans l'équipe de l'agence (inscription classique ou 1re connexion sociale).
+ * Renvoie { user } ou { error: [status, message] }.
+ */
+async function createEmployee(strapi, { agencyId, name, email, password, provider }) {
+  const agency = await strapi.service('api::agency.agency').findByCode(agencyId);
+  if (!agency) return { error: [400, 'ID agence inconnu'] };
+
+  const team = await strapi.documents('api::team.team').findFirst({
+    filters: { agency: { documentId: agency.documentId } },
+    fields: ['name'],
+    sort: 'id:asc',
+  });
+  if (!team) return { error: [400, "Cette agence n'a pas encore d'équipe"] };
+
+  const users = strapi.documents('plugin::users-permissions.user');
+  if (await users.findFirst({ filters: { email }, fields: ['id'] })) {
+    return { error: [409, 'Un compte existe déjà avec cet email'] };
+  }
+
+  // Le nom d'utilisateur doit être unique dans Strapi : "Camille Durand", "Camille Durand 2"...
+  let username = name;
+  for (let n = 2; await users.findFirst({ filters: { username }, fields: ['id'] }); n++) {
+    username = `${name} ${n}`;
+  }
+
+  const employeeRole = await strapi.documents('plugin::users-permissions.role').findFirst({
+    filters: { type: 'employee' },
+  });
+
+  // Le Document Service chiffre le mot de passe tout seul (pas de mot de passe pour un compte social)
+  const user = await users.create({
+    data: {
+      username,
+      email,
+      ...(password ? { password } : {}),
+      provider,
+      confirmed: true,
+      blocked: false,
+      role: employeeRole.documentId,
+      agency: agency.documentId,
+      team: team.documentId,
+    },
+  });
+  return { user };
 }
 
 module.exports = ({ strapi }) => ({
@@ -106,50 +155,78 @@ module.exports = ({ strapi }) => ({
       return ctx.badRequest('Le mot de passe doit faire au moins 8 caractères');
     }
 
-    // 2) L'agence doit exister, et avoir une équipe
-    const agency = await strapi.service('api::agency.agency').findByCode(agencyId);
-    if (!agency) {
-      return ctx.badRequest('ID agence inconnu');
-    }
-    const team = await strapi.documents('api::team.team').findFirst({
-      filters: { agency: { documentId: agency.documentId } },
-      fields: ['name'],
-      sort: 'id:asc',
+    // 2) Créer le compte (agence et équipe vérifiées, email unique)
+    const { user, error } = await createEmployee(strapi, {
+      agencyId,
+      name: cleanName,
+      email,
+      password,
+      provider: 'local',
     });
-    if (!team) {
-      return ctx.badRequest("Cette agence n'a pas encore d'équipe");
+    if (error) return ctx.send({ data: null, error: { status: error[0], message: error[1] } }, error[0]);
+
+    ctx.status = 201;
+    ctx.body = await buildSession(strapi, user.id);
+  },
+
+  /**
+   * Connexion avec Google / Apple / Microsoft.
+   * L'app envoie l'ID token du fournisseur ; on le vérifie (services/social.js), puis :
+   * - si un compte existe avec cet email → on le connecte (même agence obligatoire) ;
+   * - sinon → on crée un compte salarié dans l'équipe de l'agence (comme l'inscription).
+   */
+  async social(ctx) {
+    const { provider, idToken, agencyId, name } = ctx.request.body || {};
+    const social = strapi.service('api::session.social');
+
+    if (!social.PROVIDERS.includes(provider)) return ctx.badRequest('provider doit être google, apple ou microsoft');
+    if (typeof idToken !== 'string' || !idToken || idToken.length > 10000) return ctx.badRequest('idToken manquant');
+    if (typeof agencyId !== 'string' || !agencyId.trim()) return ctx.badRequest('agencyId est obligatoire (ex. AG-0001)');
+
+    let identity;
+    try {
+      identity = await social.verify(provider, idToken);
+    } catch (err) {
+      if (err instanceof social.SocialError) {
+        return ctx.send({ data: null, error: { status: err.status, message: err.message } }, err.status);
+      }
+      throw err;
     }
 
-    // 3) Email unique
-    const users = strapi.documents('plugin::users-permissions.user');
-    if (await users.findFirst({ filters: { email }, fields: ['id'] })) {
-      return ctx.conflict('Un compte existe déjà avec cet email');
-    }
-
-    // 4) Le nom d'utilisateur doit être unique dans Strapi : "Camille Durand", "Camille Durand 2"...
-    let username = cleanName;
-    for (let n = 2; await users.findFirst({ filters: { username }, fields: ['id'] }); n++) {
-      username = `${cleanName} ${n}`;
-    }
-
-    const employeeRole = await strapi.documents('plugin::users-permissions.role').findFirst({
-      filters: { type: 'employee' },
+    const existing = await strapi.documents('plugin::users-permissions.user').findFirst({
+      filters: { email: identity.email },
+      fields: ['provider', 'blocked'],
+      populate: { agency: { fields: ['code'] } },
     });
 
-    // 5) Créer le compte (le Document Service chiffre le mot de passe tout seul)
-    const user = await users.create({
-      data: {
-        username,
-        email,
-        password,
-        provider: 'local',
-        confirmed: true,
-        blocked: false,
-        role: employeeRole.documentId,
-        agency: agency.documentId,
-        team: team.documentId,
-      },
+    if (existing) {
+      // Microsoft : un compte d'organisation peut déclarer n'importe quel email. Par prudence,
+      // on ne le relie jamais à un compte créé autrement (mot de passe, Google, Apple).
+      if (provider === 'microsoft' && existing.provider !== 'microsoft') {
+        return ctx.conflict('Un compte Moodly existe déjà avec cet email : connecte-toi avec ton mot de passe');
+      }
+      if (existing.agency?.code !== agencyId.trim().toUpperCase()) {
+        return ctx.unauthorized('Ce compte appartient à une autre agence');
+      }
+      if (existing.blocked) return ctx.forbidden('Ce compte est bloqué');
+
+      const profile = await strapi.service('api::profile.profile').forUser(existing.id);
+      if (!profile.role) return ctx.forbidden("Ce compte n'a pas de rôle Moodly (Employee ou Manager)");
+
+      ctx.body = await buildSession(strapi, existing.id);
+      return;
+    }
+
+    // 1re connexion : création d'un compte salarié
+    const fallbackName = identity.email.split('@')[0];
+    const cleanName = String(identity.name || name || fallbackName).trim().replace(/\s+/g, ' ').slice(0, 50) || fallbackName;
+    const { user, error } = await createEmployee(strapi, {
+      agencyId,
+      name: cleanName.length >= 2 ? cleanName : fallbackName,
+      email: identity.email,
+      provider,
     });
+    if (error) return ctx.send({ data: null, error: { status: error[0], message: error[1] } }, error[0]);
 
     ctx.status = 201;
     ctx.body = await buildSession(strapi, user.id);

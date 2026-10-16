@@ -44,6 +44,12 @@ Content-Type: application/json
 
 { "agencyId": "{{agency}}", "name": "Zoé Test", "email": "zoe.test@exemple.fr", "password": "motdepasse1" }
 
+### Connexion Google / Apple / Microsoft : l'idToken vient de l'app (ici factice → 401, ou 503 si non configuré)
+POST {{api}}/auth/social
+Content-Type: application/json
+
+{ "agencyId": "{{agency}}", "provider": "google", "idToken": "abc.def.ghi" }
+
 ### ❌ Inscription Strapi standard désactivée → 400
 POST {{api}}/auth/local/register
 Content-Type: application/json

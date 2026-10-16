@@ -37,6 +37,7 @@ const ROLES = [
 const PUBLIC_ACTIONS = [
   'api::session.session.login', // POST /api/auth/login
   'api::session.session.register', // POST /api/auth/register
+  'api::session.session.social', // POST /api/auth/social
 ];
 
 async function findOrCreateRole(strapi, { type, name, description }) {
