@@ -20,9 +20,10 @@ import { Press, T } from '@/components/ui';
 const DEMO = { agencyId: 'AG-0001', password: 'Moodly2026!', salarie: 'camille.durand@entreprise.fr', manager: 'julien.moreau@entreprise.fr' };
 
 export default function Index() {
-  const { session } = useAuth();
+  const { session, signedOut } = useAuth();
   // 'splash' | 'loading' | 'onboarding' | 'welcome' | 'login' | 'signup'
-  const [screen, setScreen] = useState('splash');
+  // Après une déconnexion : directement le formulaire de connexion.
+  const [screen, setScreen] = useState(signedOut ? 'login' : 'splash');
   const [slide, setSlide] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -41,6 +42,14 @@ export default function Index() {
     const t = setTimeout(() => setScreen('onboarding'), 250);
     return () => clearTimeout(t);
   }, [progress]);
+
+  // L'accueil reste ouvert « en dessous » pendant qu'on est connecté : si on se déconnecte,
+  // on bascule sur le formulaire de connexion (mise à jour pendant le rendu, méthode conseillée par React).
+  const [prevSignedOut, setPrevSignedOut] = useState(signedOut);
+  if (signedOut !== prevSignedOut) {
+    setPrevSignedOut(signedOut);
+    if (signedOut) setScreen('login');
+  }
 
   // Déjà connecté (ou connexion qui vient de réussir) → l'écran du rôle
   if (session) return <Redirect href={homeFor(session)} />;

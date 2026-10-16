@@ -27,10 +27,14 @@ function toSession(res) {
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [ready, setReady] = useState(false); // false pendant qu'on relit la session au démarrage
+  // true juste après une déconnexion (ou une session expirée) : l'accueil ouvre alors
+  // directement le formulaire de connexion au lieu de rejouer splash + onboarding.
+  const [signedOut, setSignedOut] = useState(false);
 
   const save = useCallback(async (s) => {
     setApiSession(s);
     setSession(s);
+    setSignedOut(!s);
     if (s) await secureStore.set(KEY, JSON.stringify(s));
     else await secureStore.remove(KEY);
   }, []);
@@ -54,6 +58,7 @@ export function AuthProvider({ children }) {
     () => ({
       session,
       ready,
+      signedOut,
       signOut,
       /** Connexion email + mot de passe + ID agence. Lance une ApiError si refusée. */
       signIn: async (email, password, agencyId) =>
@@ -73,7 +78,7 @@ export function AuthProvider({ children }) {
         return true;
       },
     }),
-    [session, ready, save, signOut],
+    [session, ready, signedOut, save, signOut],
   );
 
   return createElement(AuthContext.Provider, { value }, children);
