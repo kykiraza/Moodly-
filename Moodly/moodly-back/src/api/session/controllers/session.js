@@ -7,6 +7,7 @@
  * POST /api/auth/register  { agencyId, name, email, password }        → 201 + session
  * POST /api/auth/social    { agencyId, provider, idToken, name? }     → 200/201 + session
  *                          provider = 'google' | 'apple' | 'microsoft'
+ * GET  /api/auth/agency?code=AG-0001                                  → { code, name } (404 si inconnu)
  *
  * La route Strapi standard POST /api/auth/local existe toujours, mais elle ne
  * vérifie pas l'agence et ne renvoie pas le rôle Moodly.
@@ -19,6 +20,23 @@ const DUMMY_HASH = '$2a$10$gOnHI13xuIDi0fDou4SU4ujntOF4iyuEFfApn0QvTEHiQDA.gpY8y
 
 const BAD_CREDENTIALS = 'Email, mot de passe ou ID agence incorrect';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Règles du mot de passe (les mêmes sont affichées dans l'app : src/lib/password.js) :
+ * 8 caractères minimum, 1 majuscule, 1 chiffre, 1 caractère spécial.
+ * Le serveur vérifie lui-même : on ne fait jamais confiance à l'app seule.
+ */
+const PASSWORD_RULES_MESSAGE =
+  'Le mot de passe doit contenir au moins 8 caractères, 1 majuscule, 1 chiffre et 1 caractère spécial';
+function passwordIsStrong(password) {
+  return (
+    typeof password === 'string' &&
+    password.length >= 8 &&
+    /\p{Lu}/u.test(password) && // une majuscule (accents compris : É…)
+    /\d/.test(password) && // un chiffre
+    /[^\p{L}\p{N}]/u.test(password) // un caractère qui n'est ni une lettre ni un chiffre (! ? @ # …)
+  );
+}
 
 /** La « session » renvoyée à l'app après login ou inscription. */
 async function buildSession(strapi, userId) {
@@ -150,10 +168,9 @@ module.exports = ({ strapi }) => ({
     if (typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
       return ctx.badRequest('Email invalide');
     }
+    if (!passwordIsStrong(password)) return ctx.badRequest(PASSWORD_RULES_MESSAGE);
     // bcrypt ne prend en compte que les 72 premiers octets d'un mot de passe
-    if (typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password) > 72) {
-      return ctx.badRequest('Le mot de passe doit faire au moins 8 caractères');
-    }
+    if (Buffer.byteLength(password) > 72) return ctx.badRequest('Le mot de passe est trop long');
 
     // 2) Créer le compte (agence et équipe vérifiées, email unique)
     const { user, error } = await createEmployee(strapi, {
@@ -230,5 +247,19 @@ module.exports = ({ strapi }) => ({
 
     ctx.status = 201;
     ctx.body = await buildSession(strapi, user.id);
+  },
+
+  /**
+   * Nom de l'entreprise pour un code, pour que la personne vérifie à l'inscription
+   * qu'elle rejoint la bonne (« ✓ Agence démo Moodly »).
+   * Il faut connaître le code pour obtenir le nom : la liste des clients n'est jamais exposée.
+   */
+  async agency(ctx) {
+    const code = typeof ctx.query.code === 'string' ? ctx.query.code.trim().toUpperCase() : '';
+    if (!/^AG-\d{4}$/.test(code)) return ctx.badRequest('Code entreprise invalide (format AG-0000)');
+
+    const agency = await strapi.service('api::agency.agency').findByCode(code);
+    if (!agency) return ctx.notFound('Code entreprise inconnu');
+    ctx.body = { code: agency.code, name: agency.name };
   },
 });
