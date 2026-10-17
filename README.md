@@ -8,7 +8,6 @@ voit le moral de son équipe sur 30 jours, uniquement en données agrégées.
 | ----------------------------------------- | -------------------------------------------------------- |
 | [`Moodly/moodly-back`](Moodly/moodly-back) | API **Strapi 5** (SQLite) : auth, rôles, saisies anonymes, stats |
 | [`Moodly/moodly-native`](Moodly/moodly-native) | App **React Native (Expo)** pour iPhone et Android, connexion Google / Apple / Microsoft |
-| [`Moodly/moodly-vue`](Moodly/moodly-vue)   | App **Vue 3 + Capacitor** (version conforme à la stack imposée par le sujet) |
 
 ## Démarrage rapide
 
@@ -21,10 +20,11 @@ npm run develop                      # http://localhost:1337
 # 2. L'app React Native (terminal 2)
 cd Moodly/moodly-native
 npm install && cp .env.example .env.local
-npx expo start --web                 # navigateur ; --go pour Expo Go sur téléphone
+npm run web                          # navigateur : http://localhost:8081
+npm run telephone                    # iPhone / Android avec l'app Expo Go (même Wi-Fi)
 ```
 
 Connexion : agence **AG-0001**, `camille.durand@entreprise.fr` (salarié) ou
 `julien.moreau@entreprise.fr` (manager), mot de passe **`Moodly2026!`**.
 
-Les détails (routes de l'API, anonymat / RGPD, Capacitor) sont dans le README de chaque dossier.
+Les détails (routes de l'API, anonymat / RGPD, connexion Google / Apple / Microsoft) sont dans le README de chaque dossier.

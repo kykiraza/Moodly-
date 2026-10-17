@@ -6,7 +6,7 @@ le manager voit le moral de son équipe, **sans jamais savoir qui a répondu quo
 - Strapi **5.58**, en JavaScript
 - Base **SQLite** (un simple fichier : `.tmp/data.db`)
 - Node.js **22 ou 24**
-- Les apps : React Native / Expo dans [`../moodly-native`](../moodly-native), Vue 3 + Capacitor dans [`../moodly-vue`](../moodly-vue)
+- L'app : React Native / Expo dans [`../moodly-native`](../moodly-native)
 
 ---
 
