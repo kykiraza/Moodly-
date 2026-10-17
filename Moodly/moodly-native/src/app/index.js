@@ -76,7 +76,9 @@ export default function Index() {
       )}
       {screen === 'welcome' && <Welcome onLogin={() => setScreen('login')} onSignup={() => setScreen('signup')} />}
       {(screen === 'login' || screen === 'signup') && (
-        <AuthForm mode={screen} onBack={() => setScreen('welcome')} onSwitch={(m) => setScreen(m)} />
+        // key : passer de « Se connecter » à « Créer un compte » repart d'un formulaire vide
+        // (sinon l'email de démo de la connexion restait rempli → « Un compte existe déjà »)
+        <AuthForm key={screen} mode={screen} onBack={() => setScreen('welcome')} onSwitch={(m) => setScreen(m)} />
       )}
       {['welcome', 'login', 'signup'].includes(screen) && (
         <View style={{ position: 'absolute', right: 16, top: 20, zIndex: 20 }}>
