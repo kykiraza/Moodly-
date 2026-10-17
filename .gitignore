@@ -1,0 +1,4 @@
+
+# Vidéos : trop lourdes pour Git (jointes aux pull requests / à la soutenance)
+*.webm
+*.mp4

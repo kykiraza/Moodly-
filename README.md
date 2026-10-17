@@ -28,3 +28,11 @@ Connexion : agence **AG-0001**, `camille.durand@entreprise.fr` (salarié) ou
 `julien.moreau@entreprise.fr` (manager), mot de passe **`Moodly2026!`**.
 
 Les détails (routes de l'API, anonymat / RGPD, connexion Google / Apple / Microsoft) sont dans le README de chaque dossier.
+
+## Documentation
+
+Tout est dans [`docs/`](docs/README.md) : tutoriel, vidéo de démo, éthique et vie privée, protocole
+d'échange, mise en œuvre, gestion de projet. La [présentation aux salariés](https://claude.ai/artifact/HPQhMHhaaG6JAXsdqq6gni)
+est en ligne (à partager depuis son menu « Partager »).
+
+Sauvegarder la base : `npm run backup` dans `Moodly/moodly-back` (copie automatique chaque nuit à 2h30).
