@@ -17,6 +17,7 @@
 
 const { createStrapi, compileStrapi } = require('@strapi/strapi');
 const { today, addDays, isWeekend, dailyKey } = require('../src/utils/moodly');
+const { backupDatabase } = require('../src/utils/backup');
 
 const PASSWORD = 'Moodly2026!';
 const DAYS = 60; // 60 jours : 30 pour le graphe + 30 pour comparer (tendance)
@@ -202,6 +203,10 @@ async function seed(strapi) {
 }
 
 async function main() {
+  // Le seed efface tout : on garde d'abord une copie de la base actuelle
+  const backup = await backupDatabase('avant-seed');
+  if (backup) console.log(`💾 Copie de sécurité de la base : ${backup}`);
+
   const appContext = await compileStrapi();
   const strapi = await createStrapi(appContext).load();
   strapi.log.level = 'error'; // on garde la console lisible

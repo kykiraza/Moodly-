@@ -6,6 +6,8 @@
   "scripts": {
     "setup": "node scripts/setup-env.js",
     "seed": "node scripts/seed.js",
+    "backup": "node scripts/backup.js",
+    "restore": "node scripts/backup.js --restore",
     "build": "strapi build",
     "console": "strapi console",
     "deploy": "strapi deploy",
